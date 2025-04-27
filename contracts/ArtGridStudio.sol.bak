@@ -1,0 +1,244 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.15;
+
+import "@lukso/lsp-smart-contracts/contracts/LSP8IdentifiableDigitalAsset/LSP8IdentifiableDigitalAsset.sol";
+import "./OwnableCustom.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@erc725/smart-contracts/contracts/custom/OwnableUnset.sol";
+
+contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, ReentrancyGuard, Pausable {
+    using Counters for Counters.Counter;
+    Counters.Counter private _tokenIds;
+
+    // NFT purchase price (in wei)
+    uint256 public nftPrice;
+
+    // Struct for engagement tier
+    struct EngagementTier {
+        uint256 likesRequired;      // Likes needed to unlock
+        uint256 commentsRequired;   // Comments needed
+        uint256 lyxStakeRequired;   // LYX stake (wei) to unlock
+        bytes32 metadataCid;       // IPFS CID for this tier
+        bool isUnlocked;           // Tier status
+    }
+
+    // NFT metadata and engagement tracking
+    struct NFTData {
+        EngagementTier[] tiers;    // Array of tiers
+        uint256 currentTier;       // Current unlocked tier
+        uint256 totalLikes;        // Total likes received
+        uint256 totalComments;     // Total comments received
+        uint256 totalStakedLyx;    // Total LYX staked
+    }
+
+    // Mappings
+    mapping(bytes32 => NFTData) private _nftData; // TokenId => NFT data
+    mapping(address => bytes32[]) private _ownedNfts; // User => Owned tokenIds
+
+    // Events
+    event NFTMinted(bytes32 indexed tokenId, address indexed creator);
+    event NFTPurchased(address indexed buyer, bytes32 indexed tokenId);
+    event EngagementUpdated(bytes32 indexed tokenId, uint256 newTier, bytes32 newMetadataCid);
+    event LYXStaked(address indexed fan, bytes32 indexed tokenId, uint256 amount);
+
+    constructor(
+        string memory _name,
+        string memory _description,
+        uint256 _nftPrice,
+        address _creator
+    ) LSP8IdentifiableDigitalAsset(_name, "AGS", _creator, 2, 0) OwnableCustom() {
+        require(bytes(_name).length <= 100, "Name too long");
+        require(bytes(_description).length <= 500, "Description too long");
+
+        nftPrice = _nftPrice;
+
+        // Set collection metadata (LSP4)
+        bytes32 metadataKey = keccak256(abi.encodePacked("LSP4Metadata"));
+        string memory collectionMetadata = string(abi.encodePacked(
+            "{\"LSP4Metadata\":{\"name\":\"", _name,
+            "\",\"description\":\"", _description,
+            "\",\"links\":[{\"title\":\"UP\",\"url\":\"profile.link/artgridstudio@1234\"}]}}"
+        ));
+        _setData(metadataKey, bytes(collectionMetadata));
+    }
+
+    // Mint NFT with engagement tiers
+    function mintNFT(
+        uint256[] memory likesRequired,
+        uint256[] memory commentsRequired,
+        uint256[] memory lyxStakeRequired,
+        bytes32[] memory metadataCids
+    ) external onlyOwnerCustom whenNotPaused {
+        require(likesRequired.length == commentsRequired.length, "Invalid tiers");
+        require(commentsRequired.length == lyxStakeRequired.length, "Invalid tiers");
+        require(lyxStakeRequired.length == metadataCids.length, "Invalid tiers");
+        require(likesRequired.length > 0, "At least one tier required");
+
+        _tokenIds.increment();
+        bytes32 tokenId = bytes32(uint256(_tokenIds.current()));
+        _mint(owner(), tokenId, false, "");
+
+        // Initialize NFT data
+        NFTData storage nft = _nftData[tokenId];
+        for (uint256 i = 0; i < likesRequired.length; i++) {
+            nft.tiers.push(EngagementTier({
+                likesRequired: likesRequired[i],
+                commentsRequired: commentsRequired[i],
+                lyxStakeRequired: lyxStakeRequired[i],
+                metadataCid: metadataCids[i],
+                isUnlocked: i == 0 // First tier is unlocked
+            }));
+        }
+        nft.currentTier = 0;
+        _ownedNfts[owner()].push(tokenId);
+
+        emit NFTMinted(tokenId, owner());
+    }
+
+    // Buy NFT
+    function buyNFT() external payable whenNotPaused nonReentrant {
+        require(msg.value >= nftPrice, "Insufficient payment");
+        require(_ownedNfts[owner()].length > 0, "No NFTs available");
+
+        bytes32 tokenId = _ownedNfts[owner()][_ownedNfts[owner()].length - 1];
+        _ownedNfts[owner()].pop();
+        _transfer(owner(), msg.sender, tokenId, false, "");
+        _ownedNfts[msg.sender].push(tokenId);
+
+        if (msg.value > nftPrice) {
+            (bool refundSent,) = payable(msg.sender).call{value: msg.value - nftPrice}("");
+            require(refundSent, "Refund failed");
+        }
+
+        (bool creatorSent,) = payable(owner()).call{value: nftPrice}("");
+        require(creatorSent, "Transfer to creator failed");
+
+        emit NFTPurchased(msg.sender, tokenId);
+    }
+
+    // Fan engagement: Add likes/comments
+    function addEngagement(bytes32 tokenId, uint256 likes, uint256 comments) external whenNotPaused {
+        require(_exists(tokenId), "NFT does not exist");
+        NFTData storage nft = _nftData[tokenId];
+        require(nft.tiers.length > nft.currentTier + 1, "No more tiers to unlock");
+
+        nft.totalLikes += likes;
+        nft.totalComments += comments;
+
+        // Check if next tier is unlocked
+        EngagementTier memory nextTier = nft.tiers[nft.currentTier + 1];
+        if (
+            nft.totalLikes >= nextTier.likesRequired &&
+            nft.totalComments >= nextTier.commentsRequired &&
+            nft.totalStakedLyx >= nextTier.lyxStakeRequired &&
+            !nextTier.isUnlocked
+        ) {
+            nft.currentTier++;
+            nft.tiers[nft.currentTier].isUnlocked = true;
+            _setDataForTokenId(tokenId, keccak256(abi.encodePacked("LSP4Metadata")), abi.encodePacked(nextTier.metadataCid));
+            emit EngagementUpdated(tokenId, nft.currentTier, nextTier.metadataCid);
+        }
+    }
+
+    // Fan stakes LYX to progress tiers
+    function stakeLYX(bytes32 tokenId) external payable whenNotPaused nonReentrant {
+        require(_exists(tokenId), "NFT does not exist");
+        require(msg.value > 0, "No LYX sent");
+        NFTData storage nft = _nftData[tokenId];
+        require(nft.tiers.length > nft.currentTier + 1, "No more tiers to unlock");
+
+        nft.totalStakedLyx += msg.value;
+
+        // Transfer LYX to creator
+        (bool sent,) = payable(owner()).call{value: msg.value}("");
+        require(sent, "Transfer to creator failed");
+
+        // Check if next tier is unlocked
+        EngagementTier memory nextTier = nft.tiers[nft.currentTier + 1];
+        if (
+            nft.totalLikes >= nextTier.likesRequired &&
+            nft.totalComments >= nextTier.commentsRequired &&
+            nft.totalStakedLyx >= nextTier.lyxStakeRequired &&
+            !nextTier.isUnlocked
+        ) {
+            nft.currentTier++;
+            nft.tiers[nft.currentTier].isUnlocked = true;
+            _setDataForTokenId(tokenId, keccak256(abi.encodePacked("LSP4Metadata")), abi.encodePacked(nextTier.metadataCid));
+            emit EngagementUpdated(tokenId, nft.currentTier, nextTier.metadataCid);
+        }
+
+        emit LYXStaked(msg.sender, tokenId, msg.value);
+    }
+
+    // Get NFT data
+    function getNFTData(bytes32 tokenId) external view returns (
+        uint256 currentTier,
+        uint256 totalLikes,
+        uint256 totalComments,
+        uint256 totalStakedLyx,
+        EngagementTier[] memory tiers
+    ) {
+        require(_exists(tokenId), "NFT does not exist");
+        NFTData storage nft = _nftData[tokenId];
+        return (
+            nft.currentTier,
+            nft.totalLikes,
+            nft.totalComments,
+            nft.totalStakedLyx,
+            nft.tiers
+        );
+    }
+
+    // Get owned NFTs
+    function getOwnedNFTs(address user) external view returns (bytes32[] memory) {
+        return _ownedNfts[user];
+    }
+
+    // Pause contract
+    function pause() external onlyOwnerCustom {
+        _pause();
+    }
+
+    // Unpause contract
+    function unpause() external onlyOwnerCustom {
+        _unpause();
+    }
+
+    // Notify UP on transfer
+    function _notifyTokenReceiver(address from, address to, bytes32 tokenId) private {
+        if (to.code.length > 0) {
+            try ILSP1UniversalReceiver(to).universalReceiver(
+                bytes32(0),
+                abi.encodePacked(from, to, tokenId)
+            ) {} catch {}
+        }
+    }
+
+    // Reject direct payments
+    receive() external payable override {
+        revert("Direct payments not allowed");
+    }
+
+    // Explicitly override conflicting functions
+    function owner() public view virtual override(OwnableCustom, OwnableUnset) returns (address) {
+        return OwnableCustom.owner();
+    }
+
+    function renounceOwnership() public virtual override(OwnableCustom, OwnableUnset) onlyOwnerCustom {
+        OwnableCustom.renounceOwnership();
+    }
+
+    function transferOwnership(address newOwner) public virtual override(OwnableCustom, OwnableUnset) onlyOwnerCustom {
+        OwnableCustom.transferOwnership(newOwner);
+    }
+
+    function _checkOwner() internal view virtual override(OwnableCustom, OwnableUnset) {
+        OwnableCustom._checkOwner();
+    }
+}
+
+interface ILSP1UniversalReceiver {
+    function universalReceiver(bytes32 typeId, bytes memory data) external returns (bytes memory);
+}

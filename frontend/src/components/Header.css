@@ -1,0 +1,156 @@
+/* Header styles */
+.app-header {
+  background: rgba(15, 10, 30, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 20px, 10px, 0px, 10px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(123, 78, 253, 0.3);
+}
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.logo h1 {
+  padding-left: 20px;
+  font-size: 2rem;
+  font-weight: 800;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+  letter-spacing: 1px;
+  margin-left: 20px; 
+  animation: float 6s ease-in-out infinite;
+}
+
+.logo::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  width: 40px;
+  height: 3px;
+  background: var(--gradient);
+  border-radius: 3px;
+  margin-left: 40px;
+}
+
+.tagline {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 5px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.wallet-connect {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(90deg, #a66cff, #f957b6);
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  color: white;
+  font-size: 0.95rem;
+  box-shadow: 0 0 10px rgba(249, 87, 182, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+
+/* Custom styling for RainbowKit button */
+.wallet-connect button {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-radius: var(--border-radius) !important;
+  border: 1px solid rgba(123, 78, 253, 0.3) !important;
+  transition: all 0.3s ease !important;
+  border: none;
+  outline: none ; 
+}
+
+.wallet-connect button:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 0 15px rgba(123, 78, 253, 0.3) !important;
+  transform: translateY(-2px);
+}
+
+/* Navigation */
+.app-nav {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  margin-bottom: 30px;
+  position: relative;
+}
+
+.app-nav::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    rgba(123, 78, 253, 0) 0%, 
+    rgba(123, 78, 253, 0.5) 50%, 
+    rgba(123, 78, 253, 0) 100%
+  );
+}
+
+.app-nav button {
+  padding: 10px 24px;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-nav button::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 3px;
+  background: var(--gradient);
+  transition: width 0.3s ease;
+  border-radius: 3px;
+}
+
+.app-nav button:hover {
+  color: var(--text);
+}
+
+.app-nav button:hover::before {
+  width: 70%;
+}
+
+.app-nav button.active {
+  color: var(--text);
+  background: rgba(123, 78, 253, 0.1);
+}
+
+.app-nav button.active::before {
+  width: 70%;
+}

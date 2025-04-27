@@ -1,0 +1,22 @@
+const { PinataSDK } = require('pinata');
+const { readFileSync, createReadStream } = require('fs');
+const path = require('path');
+
+
+const pinata = new PinataSDK({
+  pinataJwt: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI1NmZhODNkOS05OWM3LTQyODEtYWViNi0zZDVkYzVmMDBkMDEiLCJlbWFpbCI6ImFuaXNoZ2FqYmhhcmUyMDAwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiJlOGM3OTg1NGYxNzlhYmI5OGU0MSIsInNjb3BlZEtleVNlY3JldCI6IjA4NjBiZDAwMzkwMjE0MmE4YTQwYTE0MDVlMjZiMWRkYWFiNTI3OTNlYTE0YWNiMDk3YmU5ZDE2YTU1Y2ZmMTMiLCJleHAiOjE3NzcxMTk0Nzl9.IZbPPlR4uhTjBg9FsTLCJ-9kTySHVgF9ssDfTUd92jw', // Replace with PINATA_JWT from .dev.vars
+  pinataGateway: 'chocolate-important-eagle-144.mypinata.cloud',
+});
+
+async function uploadImage() {
+  try {
+    const filePath = '/home/techsteck/Documents/ArtGridNFT/frontend/src/NFT9.jpeg'; // Update with actual path
+    const file = new File([readFileSync(filePath)], 'nft-image-0x0003.jpg', { type: 'image/jpeg' });
+    const upload = await pinata.upload.file(file);
+    console.log('Uploaded CID:', upload.cid);
+  } catch (error) {
+    console.error('Upload failed:', error);
+  }
+}
+
+uploadImage();
