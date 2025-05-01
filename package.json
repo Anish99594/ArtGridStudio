@@ -12,7 +12,8 @@
   "description": "",
   "dependencies": {
     "dotenv": "^16.4.5",
-    "ethers": "^5.7.2"
+    "ethers": "^5.7.2",
+    "jose": "^6.0.10"
   },
   "devDependencies": {
     "@erc725/smart-contracts": "^7.0.0",

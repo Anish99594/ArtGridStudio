@@ -2,37 +2,34 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "pinata-server",
   "main": "src/index.ts",
-  "compatibility_date": "2025-04-20"
-  // "compatibility_flags": [
-  //   "nodejs_compat"
-  // ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
-  // "ai": {
-  //   "binding": "AI"
-  // },
-  // "observability": {
-  //   "enabled": true,
-  //   "head_sampling_rate": 1
-  // }
+  "compatibility_date": "2025-04-27",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    // Pinata JWT for authenticating with Pinata API
+    "PINATA_JWT": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI1NmZhODNkOS05OWM3LTQyODEtYWViNi0zZDVkYzVmMDBkMDEiLCJlbWFpbCI6ImFuaXNoZ2FqYmhhcmUyMDAwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiIzMDA1ZDFlYWJlZDUyYWZkYzA1MCIsInNjb3BlZEtleVNlY3JldCI6IjFhMjY1NDhmNDZmMWFhOTdmNTkyNGIyOGRhYTIyMWQ2MzMzNDhkZTQxNmE2ZjQ4ZjcwMjM0NGJhYzBjNTFiNjIiLCJleHAiOjE3NzczNzk3OTZ9.Tafz78scEADOtAtHz5JaV1gEHINB_qUkxEtEQDFiia8",
+    // Pinata gateway URL for IPFS access
+    "GATEWAY_URL": "chocolate-important-eagle-144.mypinata.cloud",
+    // Pinata API key for server authentication
+    "SERVER_API_KEY": "3005d1eabed52afdc050",
+    // Pinata gateway token for IPFS content retrieval
+    "PINATA_GATEWAY_TOKEN": "Q-FNhHAKXfaalglh2PFeo2rwWGOVtdqtQx2DfdlfcqUwpQIdSpbZO8XNw58CR6_G",
+    // Shared secret for JWT authentication between frontend and server
+    "SHARED_SECRET": "58A14073BC6612B0A26C4101759DF0BE"
+  }
 }
+
+// VITE_GATEWAY_URL=chocolate-important-eagle-144.mypinata.cloud
+// VITE_SERVER_API_KEY=4ddd3a23889e2da89a21
+// VITE_SERVER_URL=http://localhost:8787
+// VITE_SHARED_SECRET=58A14073BC6612B0A26C4101759DF0BE  # Generate a strong, unique secret (e.g., 32+ random characters)
+// VITE_INFURA_API_KEY=3ae649d328e8405fb461d9cac9b0705b
+// VITE_INFURA_API_KEY_SECRET=RcKmb8A8JqNOkjwnDUEBfEv22hCFykaDczJdpOTcxzDR0rc/0HUEWQ
+
+
+// PINATA_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiI1NmZhODNkOS05OWM3LTQyODEtYWViNi0zZDVkYzVmMDBkMDEiLCJlbWFpbCI6ImFuaXNoZ2FqYmhhcmUyMDAwQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI0ZGRkM2EyMzg4OWUyZGE4OWEyMSIsInNjb3BlZEtleVNlY3JldCI6IjZmYzA3YThhMjBmOTFiZjhmYWNhMDYzZDcwYjVmM2E2YTFlMDgzM2I2NjMyMDkwMjllYTQxOTAyNzYyMDdjYjciLCJleHAiOjE3NzczMTYwMDZ9.lLZM7c9cxP9bzkyp4dpY6ffcPxK8UQna2TmNb5CsrYQ
+// GATEWAY_URL=chocolate-important-eagle-144.mypinata.cloud
+// SERVER_API_KEY=4ddd3a23889e2da89a21
+// PINATA_GATEWAY_TOKEN=Q-FNhHAKXfaalglh2PFeo2rwWGOVtdqtQx2DfdlfcqUwpQIdSpbZO8XNw58CR6_G
+// SHARED_SECRET=58A14073BC6612B0A26C4101759DF0BE  # Must match VITE_SHARED_SECRET

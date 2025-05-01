@@ -1,110 +1,165 @@
-/* Header styles */
+/* Enhanced Header styles */
 .app-header {
-  background: rgba(15, 10, 30, 0.8);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  padding: 20px, 10px, 0px, 10px;
-
+  background: rgba(10, 6, 20, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 16px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
   z-index: 100;
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
-  border-bottom: 1px solid rgba(123, 78, 253, 0.3);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(123, 78, 253, 0.2);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  height: 80px;
 }
 
-.logo {
+.app-header.scrolled {
+  height: 70px;
+  background: rgba(8, 4, 16, 0.95);
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+}
+
+.header-content {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 10;
+}
+
+/* Logo styling */
+.logo-container {
+  position: relative;
   display: flex;
   flex-direction: column;
-  position: relative;
+  padding: 6px 8px;
+  transform: translateY(5px);
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.logo h1 {
-  padding-left: 20px;
-  font-size: 2rem;
+.logo-container.animate {
+  transform: translateY(0);
+}
+
+.logo-glow {
+  position: absolute;
+  width: 100px;
+  height: 50px;
+  background: radial-gradient(
+    circle at center,
+    rgba(123, 78, 253, 0.4) 0%,
+    rgba(249, 87, 182, 0.2) 50%,
+    transparent 70%
+  );
+  filter: blur(20px);
+  opacity: 0;
+  top: 0;
+  left: 20px;
+  z-index: -1;
+  animation: glow-pulse 3s ease-in-out infinite alternate;
+}
+
+.logo-container.animate .logo-glow {
+  opacity: 1;
+}
+
+.logo-text {
+  font-size: 2.2rem;
   font-weight: 800;
-  background: var(--gradient);
+  margin: 0;
+  letter-spacing: 0.5px;
+  display: flex;
+  line-height: 1;
+}
+
+.logo-art {
+  background: linear-gradient(to right, #7b4efd, #b47dff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin: 0;
-  letter-spacing: 1px;
-  margin-left: 20px; 
-  animation: float 6s ease-in-out infinite;
+  animation: text-shimmer 3s infinite;
 }
 
-.logo::after {
-  content: '';
-  position: absolute;
-  bottom: -8px;
-  left: 0;
-  width: 40px;
+.logo-grid {
+  background: linear-gradient(to right, #b47dff, #e878c7);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-shimmer 3s infinite 0.2s;
+}
+
+.logo-studio {
+  background: linear-gradient(to right, #e878c7, #f957b6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: text-shimmer 3s infinite 0.4s;
+  margin-left: 3px;
+}
+
+.logo-underline {
   height: 3px;
-  background: var(--gradient);
+  width: 0;
+  background: linear-gradient(to right, #7b4efd, #f957b6);
   border-radius: 3px;
-  margin-left: 40px;
+  margin-top: 6px;
+  margin-left: 2px;
+  box-shadow: 0 0 10px rgba(123, 78, 253, 0.6);
+  transition: width 1.2s cubic-bezier(0.25, 1, 0.5, 1) 0.3s;
+}
+
+.logo-container.animate .logo-underline {
+  width: 120px;
 }
 
 .tagline {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin-top: 5px;
-  letter-spacing: 0.5px;
+  font-size: 0.8rem;
+  margin-top: 8px;
+  font-weight: 600;
   text-transform: uppercase;
-  font-weight: 500;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.6);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s;
 }
 
-.wallet-connect {
-  position: relative;
+.logo-container.animate .tagline {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tagline span {
+  background: linear-gradient(to right, rgba(123, 78, 253, 0.8), rgba(249, 87, 182, 0.8));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Header navigation */
+.header-nav-container {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: linear-gradient(90deg, #a66cff, #f957b6);
-  border: none;
-  border-radius: 12px;
-  font-weight: 600;
-  color: white;
-  font-size: 0.95rem;
-  box-shadow: 0 0 10px rgba(249, 87, 182, 0.4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  cursor: pointer;
+  gap: 16px;
 }
 
-
-/* Custom styling for RainbowKit button */
-.wallet-connect button {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-radius: var(--border-radius) !important;
-  border: 1px solid rgba(123, 78, 253, 0.3) !important;
-  transition: all 0.3s ease !important;
-  border: none;
-  outline: none ; 
-}
-
-.wallet-connect button:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 0 15px rgba(123, 78, 253, 0.3) !important;
-  transform: translateY(-2px);
-}
-
-/* Navigation */
+/* App Navigation styling */
 .app-nav {
   display: flex;
   justify-content: center;
-  gap: 10px;
-  padding: 16px;
-  margin-bottom: 30px;
+  gap: 16px;
+  padding: 10px 0;
   position: relative;
 }
 
 .app-nav::before {
   content: '';
   position: absolute;
-  bottom: 0;
+  bottom: -3px;
   left: 50%;
   transform: translateX(-50%);
-  width: 80%;
+  width: 90%;
   height: 1px;
   background: linear-gradient(90deg, 
     rgba(123, 78, 253, 0) 0%, 
@@ -114,18 +169,35 @@
 }
 
 .app-nav button {
-  padding: 10px 24px;
+  padding: 10px 20px;
   background: transparent;
-  color: var(--text-secondary);
-  border-radius: var(--border-radius);
+  color: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
+  border: none;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .app-nav button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(123, 78, 253, 0.2), rgba(249, 87, 182, 0.1));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 12px;
+}
+
+.app-nav button::after {
   content: '';
   position: absolute;
   bottom: 0;
@@ -133,24 +205,194 @@
   transform: translateX(-50%);
   width: 0;
   height: 3px;
-  background: var(--gradient);
+  background: linear-gradient(to right, #7b4efd, #f957b6);
   transition: width 0.3s ease;
   border-radius: 3px;
 }
 
 .app-nav button:hover {
-  color: var(--text);
+  color: white;
+  transform: translateY(-2px);
 }
 
 .app-nav button:hover::before {
-  width: 70%;
+  opacity: 1;
+}
+
+.app-nav button:hover::after {
+  width: 60%;
 }
 
 .app-nav button.active {
-  color: var(--text);
-  background: rgba(123, 78, 253, 0.1);
+  color: white;
+  background: linear-gradient(135deg, rgba(123, 78, 253, 0.2), rgba(249, 87, 182, 0.1));
+  box-shadow: 0 0 15px rgba(123, 78, 253, 0.2);
 }
 
-.app-nav button.active::before {
+.app-nav button.active::after {
   width: 70%;
+}
+
+/* Wallet Button styling */
+.wallet-button {
+  transition: transform 0.3s ease;
+}
+
+.wallet-button > div {
+  border: 1px solid rgba(123, 78, 253, 0.4) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(123, 78, 253, 0.2);
+}
+
+.wallet-button:hover > div {
+  border: 1px solid rgba(123, 78, 253, 0.8) !important;
+  box-shadow: 0 5px 15px rgba(123, 78, 253, 0.4);
+}
+
+/* Decorative elements */
+.header-decorations {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.header-particle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.6;
+  filter: blur(3px);
+}
+
+.particle1 {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(to right, #7b4efd, #b47dff);
+  top: 30%;
+  right: 10%;
+  animation: float-particle 15s ease-in-out infinite;
+}
+
+.particle2 {
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(to right, #e878c7, #f957b6);
+  top: 60%;
+  right: 25%;
+  animation: float-particle 10s ease-in-out infinite 2s;
+}
+
+.particle3 {
+  width: 15px;
+  height: 15px;
+  background: linear-gradient(to right, #b47dff, #e878c7);
+  bottom: 20%;
+  right: 40%;
+  animation: float-particle 12s ease-in-out infinite 4s;
+}
+
+.header-accent {
+  position: absolute;
+  background: linear-gradient(135deg, rgba(123, 78, 253, 0.4), rgba(249, 87, 182, 0.2));
+  filter: blur(40px);
+  border-radius: 50%;
+  opacity: 0.15;
+}
+
+.accent1 {
+  width: 200px;
+  height: 200px;
+  top: -100px;
+  left: -50px;
+}
+
+.accent2 {
+  width: 300px;
+  height: 150px;
+  bottom: -80px;
+  right: -50px;
+}
+
+.header-logo {
+  width: 200px;
+  height: auto;
+  transition: transform 0.3s ease;
+}
+
+.logo-container.animate .header-logo {
+  transform: scale(1.05);
+}
+
+@media (max-width: 768px) {
+  .header-logo {
+    width: 150px; /* Smaller size for mobile devices */
+  }
+}
+/* Animations */
+@keyframes float-particle {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(10px, 10px);
+  }
+  50% {
+    transform: translate(0, 20px);
+  }
+  75% {
+    transform: translate(-10px, 10px);
+  }
+}
+
+@keyframes text-shimmer {
+  0% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.2);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@keyframes glow-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0.6;
+  }
+}
+
+/* Media queries for responsiveness */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 14px 16px;
+    height: auto;
+  }
+  
+  .logo-text {
+    font-size: 1.8rem;
+  }
+  
+  .tagline {
+    font-size: 0.7rem;
+  }
+  
+  .app-nav {
+    gap: 8px;
+  }
+  
+  .app-nav button {
+    padding: 8px 16px;
+    font-size: 0.85rem;
+  }
 }

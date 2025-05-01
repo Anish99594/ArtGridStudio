@@ -46,6 +46,9 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
     event EngagementUpdated(bytes32 indexed tokenId, uint256 newTier, string newMetadataCid);
     event LYXStaked(address indexed fan, bytes32 indexed tokenId, uint256 amount);
     event CommentAdded(bytes32 indexed tokenId, address indexed commenter, string text, uint256 timestamp);
+    event LikeAdded(bytes32 indexed tokenId, address indexed user, uint256 likes);
+    event NFTListed(bytes32 indexed tokenId, address indexed seller, uint256 price);
+    event NFTListingCanceled(bytes32 indexed tokenId, address indexed seller);
     event UniversalReceiverCalled(address indexed to, bytes32 typeId, bytes data);
 
     constructor(
@@ -71,25 +74,28 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
         uint256[] memory lyxStakeRequired,
         string[] memory metadataCids,
         uint256 price
-    ) external whenNotPaused {
+    ) external whenNotPaused nonReentrant {
         require(likesRequired.length == commentsRequired.length, "Invalid tiers");
         require(commentsRequired.length == lyxStakeRequired.length, "Invalid tiers");
         require(lyxStakeRequired.length == metadataCids.length, "Invalid tiers");
         require(likesRequired.length > 0, "At least one tier required");
         require(price > 0, "Price must be greater than zero");
+        require(bytes(metadataCids[0]).length > 0, "Invalid metadata CID");
 
         _tokenIds.increment();
         bytes32 tokenId = bytes32(uint256(_tokenIds.current()));
         
         _mint(address(this), tokenId, true, "");
+        _transfer(address(this), msg.sender, tokenId, true, "");
 
         NFTData storage nft = _nftData[tokenId];
         for (uint256 i = 0; i < likesRequired.length; i++) {
+            string memory ipfsUrl = string(abi.encodePacked("ipfs://", metadataCids[i]));
             nft.tiers.push(EngagementTier({
                 likesRequired: likesRequired[i],
                 commentsRequired: commentsRequired[i],
                 lyxStakeRequired: lyxStakeRequired[i],
-                metadataCid: metadataCids[i],
+                metadataCid: ipfsUrl,
                 isUnlocked: i == 0
             }));
         }
@@ -98,32 +104,96 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
         _ownedNfts[address(this)].push(tokenId);
         _nftPrices[tokenId] = price;
 
-        _setData(
-            bytes32(bytes.concat(keccak256(abi.encodePacked("LSP4Metadata")), tokenId)),
-            bytes(metadataCids[0])
+        bytes32 metadataKey = keccak256(
+            abi.encodePacked(
+                keccak256(abi.encodePacked("LSP4Metadata")),
+                tokenId
+            )
         );
+        string memory metadataUrl = string(abi.encodePacked("ipfs://", metadataCids[0]));
+        _setTokenIdData(tokenId, metadataKey, bytes(metadataUrl));
 
-        emit NFTMinted(tokenId, owner(), price);
+        _transfer(msg.sender, address(this), tokenId, true, "");
+
+        emit NFTMinted(tokenId, msg.sender, price);
     }
 
-    function buyNFT() external payable whenNotPaused nonReentrant {
-        require(_ownedNfts[address(this)].length > 0, "No NFTs available");
-        bytes32 tokenId = _ownedNfts[address(this)][_ownedNfts[address(this)].length - 1];
-        uint256 price = _nftPrices[tokenId];
-        require(msg.value >= price, "Insufficient payment");
-
-        _ownedNfts[address(this)].pop();
-        _transfer(address(this), msg.sender, tokenId, true, "");
-
-        if (msg.value > price) {
-            (bool refundSent,) = payable(msg.sender).call{value: msg.value - price}("");
-            require(refundSent, "Refund failed");
+    function buyNFT(bytes32 tokenId) external payable whenNotPaused nonReentrant {
+    require(_exists(tokenId), "NFT does not exist");
+    bool isListed = false;
+    for (uint256 i = 0; i < _ownedNfts[address(this)].length; i++) {
+        if (_ownedNfts[address(this)][i] == tokenId) {
+            isListed = true;
+            _ownedNfts[address(this)][i] = _ownedNfts[address(this)][_ownedNfts[address(this)].length - 1];
+            _ownedNfts[address(this)].pop();
+            break;
         }
+    }
+    require(isListed, "NFT not listed");
+    uint256 price = _nftPrices[tokenId];
+    require(msg.value >= price, "Insufficient payment");
 
-        (bool creatorSent,) = payable(owner()).call{value: price}("");
-        require(creatorSent, "Transfer to creator failed");
+    address seller = tokenOwnerOf(tokenId);
+    _transfer(address(this), msg.sender, tokenId, true, "");
 
-        emit NFTPurchased(msg.sender, tokenId, price);
+    if (msg.value > price) {
+        (bool refundSent,) = payable(msg.sender).call{value: msg.value - price}("");
+        require(refundSent, "Refund failed");
+    }
+
+    (bool sellerSent,) = payable(seller).call{value: price}("");
+    require(sellerSent, "Transfer to seller failed");
+
+    emit NFTPurchased(msg.sender, tokenId, price);
+}
+
+    function listNFTForSale(bytes32 tokenId, uint256 price) external whenNotPaused nonReentrant {
+        require(_exists(tokenId), "NFT does not exist");
+        require(_isOperatorOrOwner(msg.sender, tokenId), "Not owner or operator");
+        require(price > 0, "Price must be greater than zero");
+
+        _transfer(msg.sender, address(this), tokenId, true, "");
+        _nftPrices[tokenId] = price;
+        _ownedNfts[address(this)].push(tokenId);
+
+        emit NFTListed(tokenId, msg.sender, price);
+    }
+
+    function cancelListing(bytes32 tokenId) external whenNotPaused nonReentrant {
+        require(_exists(tokenId), "NFT does not exist");
+        require(_ownedNfts[address(this)].length > 0, "No NFTs listed");
+        
+        // Fix: Rename isListed to nftIsListed to avoid shadowing the isListed function
+        bool nftIsListed = false;
+        for (uint256 i = 0; i < _ownedNfts[address(this)].length; i++) {
+            if (_ownedNfts[address(this)][i] == tokenId) {
+                nftIsListed = true;
+                _ownedNfts[address(this)][i] = _ownedNfts[address(this)][_ownedNfts[address(this)].length - 1];
+                _ownedNfts[address(this)].pop();
+                break;
+            }
+        }
+        require(nftIsListed, "NFT not listed");
+
+        // Fix: Replace tokenIdOperator with tokenOwnerOf and rename owner to nftOwner to avoid shadowing
+        address nftOwner = tokenOwnerOf(tokenId);
+        _transfer(address(this), nftOwner, tokenId, true, "");
+        delete _nftPrices[tokenId];
+
+        emit NFTListingCanceled(tokenId, msg.sender);
+    }
+
+    function isListed(bytes32 tokenId) external view returns (bool) {
+        for (uint256 i = 0; i < _ownedNfts[address(this)].length; i++) {
+            if (_ownedNfts[address(this)][i] == tokenId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function hasLiked(bytes32 tokenId, address user) external view returns (bool) {
+        return _userLikes[tokenId][user];
     }
 
     function addEngagement(bytes32 tokenId, uint256 likes, string memory comment) external whenNotPaused {
@@ -135,6 +205,7 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
             require(!_userLikes[tokenId][msg.sender], "You have already liked this NFT");
             _userLikes[tokenId][msg.sender] = true;
             nft.totalLikes += likes;
+            emit LikeAdded(tokenId, msg.sender, likes);
         }
 
         if (bytes(comment).length > 0) {
@@ -157,10 +228,13 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
         ) {
             nft.currentTier++;
             nextTier.isUnlocked = true;
-            _setData(
-                bytes32(bytes.concat(keccak256(abi.encodePacked("LSP4Metadata")), tokenId)),
-                bytes(nextTier.metadataCid)
+            bytes32 metadataKey = keccak256(
+                abi.encodePacked(
+                    keccak256(abi.encodePacked("LSP4Metadata")),
+                    tokenId
+                )
             );
+            _setTokenIdData(tokenId, metadataKey, bytes(nextTier.metadataCid));
             emit EngagementUpdated(tokenId, nft.currentTier, nextTier.metadataCid);
         }
     }
@@ -185,10 +259,13 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
         ) {
             nft.currentTier++;
             nextTier.isUnlocked = true;
-            _setData(
-                bytes32(bytes.concat(keccak256(abi.encodePacked("LSP4Metadata")), tokenId)),
-                bytes(nextTier.metadataCid)
+            bytes32 metadataKey = keccak256(
+                abi.encodePacked(
+                    keccak256(abi.encodePacked("LSP4Metadata")),
+                    tokenId
+                )
             );
+            _setTokenIdData(tokenId, metadataKey, bytes(nextTier.metadataCid));
             emit EngagementUpdated(tokenId, nft.currentTier, nextTier.metadataCid);
         }
 
