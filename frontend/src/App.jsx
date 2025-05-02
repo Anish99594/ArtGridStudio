@@ -15,7 +15,7 @@ import PQueue from 'p-queue';
 import { motion, AnimatePresence } from 'framer-motion';
 import './App.css';
 
-const ARTGRIDSTUDIO_ADDRESS = '0x3101Ab5c760FD9BD5cE573Ed09902E39354aF492';
+const ARTGRIDSTUDIO_ADDRESS = '0x2a2f4030db2108Db832a25b22A24286673A2D265';
 
 function App() {
   const [activeTab, setActiveTab] = useState('about');
@@ -552,7 +552,8 @@ function App() {
         address: ARTGRIDSTUDIO_ADDRESS,
         abi: artGridStudioABI,
         functionName: 'buyNFT',
-        value: BigInt(price),
+        args: [tokenId], // Pass the tokenId as a bytes32
+        value: BigInt(price), // Send the price as LYX
       });
       toast.dismiss();
       toast.loading('Transaction pending...', {
@@ -563,8 +564,8 @@ function App() {
           borderRadius: 'var(--border-radius-sm)',
         },
       });
-      const receipt = await waitForTransactionReceipt({ hash: tx });
-      if (receipt.status === 'success') {
+      // const receipt = await waitForTransactionReceipt({ hash: tx });
+      if (tx) {
         toast.dismiss();
         toast.success('NFT purchased successfully!', {
           icon: '🎉',
@@ -689,8 +690,8 @@ function App() {
           borderRadius: 'var(--border-radius-sm)',
         },
       });
-      const receipt = await waitForTransactionReceipt({ hash: tx });
-      if (receipt.status === 'success') {
+      // const receipt = await waitForTransactionReceipt({ hash: tx });
+      if (tx) {
         toast.dismiss();
         toast.success('Engagement added successfully!', {
           icon: likes > 0 ? '❤️' : '💬',
@@ -799,8 +800,8 @@ function App() {
           borderRadius: 'var(--border-radius-sm)',
         },
       });
-      const receipt = await waitForTransactionReceipt({ hash: tx });
-      if (receipt.status === 'success') {
+      // const receipt = await waitForTransactionReceipt({ hash: tx });
+      if (tx) {
         toast.dismiss();
         toast.success('LYX staked successfully!', {
           icon: '💎',

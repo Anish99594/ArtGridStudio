@@ -33,9 +33,7 @@ const NFTCard = React.memo(
     const [isLoadingImage, setIsLoadingImage] = useState(true);
     const [imageError, setImageError] = useState(false);
     const [attemptCount, setAttemptCount] = useState(0);
-    const [isHovered, setIsHovered] = useState(false);
     const isFetchingRef = useRef(false);
-    const cardRef = useRef(null);
 
     const { address } = useAccount();
     const { writeContractAsync } = useWriteContract();
@@ -58,48 +56,6 @@ const NFTCard = React.memo(
       args: [tokenId],
       enabled: !!tokenId,
     });
-
-    // 3D tilt effect on hover
-    useEffect(() => {
-      if (!cardRef.current) return;
-
-      const card = cardRef.current;
-
-      const handleMouseMove = (e) => {
-        if (!isHovered) return;
-
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
-
-        const rotateX = (y - centerY) / 15;
-        const rotateY = (centerX - x) / 15;
-
-        card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-      };
-
-      const handleMouseEnter = () => {
-        setIsHovered(true);
-      };
-
-      const handleMouseLeave = () => {
-        setIsHovered(false);
-        card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale(1)';
-      };
-
-      card.addEventListener('mousemove', handleMouseMove);
-      card.addEventListener('mouseenter', handleMouseEnter);
-      card.addEventListener('mouseleave', handleMouseLeave);
-
-      return () => {
-        card.removeEventListener('mousemove', handleMouseMove);
-        card.removeEventListener('mouseenter', handleMouseEnter);
-        card.removeEventListener('mouseleave', handleMouseLeave);
-      };
-    }, [isHovered]);
 
     const generateJwt = useCallback(async () => {
       const now = Date.now();
@@ -411,7 +367,7 @@ const NFTCard = React.memo(
     return (
       <div className="nft-card-wrapper">
         <div className="nft-card-glow"></div>
-        <div ref={cardRef} className={`nft-card ${isHovered ? 'hovered' : ''}`}>
+        <div className="nft-card">
           <div className="nft-rank-badge">Tier {nftData.currentTier + 1}</div>
           <div className="nft-image-container">
             {isLoadingImage ? (
@@ -486,25 +442,25 @@ const NFTCard = React.memo(
               </div>
             )}
             <div className="engagement-stats">
-  {console.log('Rendering engagement stats for tokenId', tokenId, 'with nftData:', nftData)}
-  <div className="stat">
-    <div className="stat-icon likes-icon">❤️</div>
-    <span className="stat-value">{nftData.totalLikes || 0}</span>
-    <span className="stat-label">Likes</span>
-  </div>
-  <div className="stat">
-    <div className="stat-icon comments-icon">💬</div>
-    <span className="stat-value">{nftData.totalComments || 0}</span>
-    <span className="stat-label">Comments</span>
-  </div>
-  <div className="stat">
-    <div className="stat-icon stake-icon">💎</div>
-    <span className="stat-value">
-      {nftData.totalStakedLyx ? formatEther(BigInt(nftData.totalStakedLyx)).slice(0, 6) : '0'}
-    </span>
-    <span className="stat-label">LYX Staked</span>
-  </div>
-</div>
+              {console.log('Rendering engagement stats for tokenId', tokenId, 'with nftData:', nftData)}
+              <div className="stat">
+                <div className="stat-icon likes-icon">❤️</div>
+                <span className="stat-value">{nftData.totalLikes || 0}</span>
+                <span className="stat-label">Likes</span>
+              </div>
+              <div className="stat">
+                <div className="stat-icon comments-icon">💬</div>
+                <span className="stat-value">{nftData.totalComments || 0}</span>
+                <span className="stat-label">Comments</span>
+              </div>
+              <div className="stat">
+                <div className="stat-icon stake-icon">💎</div>
+                <span className="stat-value">
+                  {nftData.totalStakedLyx ? formatEther(BigInt(nftData.totalStakedLyx)).slice(0, 6) : '0'}
+                </span>
+                <span className="stat-label">LYX Staked</span>
+              </div>
+            </div>
             {nftData.tiers && nftData.currentTier + 1 < nftData.tiers.length && (
               <div className="next-tier-info">
                 <h4>Next Tier Progress</h4>

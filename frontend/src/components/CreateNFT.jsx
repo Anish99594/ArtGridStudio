@@ -478,8 +478,8 @@ const CreateNFT = ({ address, onSuccess }) => {
 
       toast.loading('Transaction pending...', { id: 'create-nft' });
 
-      const receipt = await waitForTransactionReceipt({ hash: tx });
-      if (receipt.status !== 'success') {
+      // const receipt = await waitForTransactionReceipt({ hash: tx });
+      if (!tx) {
         throw new Error('Transaction failed');
       }
 

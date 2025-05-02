@@ -86,7 +86,6 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
         bytes32 tokenId = bytes32(uint256(_tokenIds.current()));
         
         _mint(address(this), tokenId, true, "");
-        _transfer(address(this), msg.sender, tokenId, true, "");
 
         NFTData storage nft = _nftData[tokenId];
         for (uint256 i = 0; i < likesRequired.length; i++) {
@@ -113,39 +112,38 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
         string memory metadataUrl = string(abi.encodePacked("ipfs://", metadataCids[0]));
         _setTokenIdData(tokenId, metadataKey, bytes(metadataUrl));
 
-        _transfer(msg.sender, address(this), tokenId, true, "");
-
         emit NFTMinted(tokenId, msg.sender, price);
     }
 
     function buyNFT(bytes32 tokenId) external payable whenNotPaused nonReentrant {
-    require(_exists(tokenId), "NFT does not exist");
-    bool isListed = false;
-    for (uint256 i = 0; i < _ownedNfts[address(this)].length; i++) {
-        if (_ownedNfts[address(this)][i] == tokenId) {
-            isListed = true;
-            _ownedNfts[address(this)][i] = _ownedNfts[address(this)][_ownedNfts[address(this)].length - 1];
-            _ownedNfts[address(this)].pop();
-            break;
+        require(_exists(tokenId), "NFT does not exist");
+        bool nftIsListed = false;
+        for (uint256 i = 0; i < _ownedNfts[address(this)].length; i++) {
+            if (_ownedNfts[address(this)][i] == tokenId) {
+                nftIsListed = true;
+                _ownedNfts[address(this)][i] = _ownedNfts[address(this)][_ownedNfts[address(this)].length - 1];
+                _ownedNfts[address(this)].pop();
+                break;
+            }
         }
+        require(nftIsListed, "NFT not listed");
+        uint256 price = _nftPrices[tokenId];
+        require(msg.value >= price, "Insufficient payment");
+
+        address seller = tokenOwnerOf(tokenId);
+        require(seller == address(this), "Seller must be the contract");
+
+        _transfer(address(this), msg.sender, tokenId, true, "");
+
+        if (msg.value > price) {
+            (bool refundSent,) = payable(msg.sender).call{value: msg.value - price}("");
+            require(refundSent, "Refund failed");
+        }
+
+        // No need to send funds to seller (contract itself); funds are already in the contract via msg.value
+
+        emit NFTPurchased(msg.sender, tokenId, price);
     }
-    require(isListed, "NFT not listed");
-    uint256 price = _nftPrices[tokenId];
-    require(msg.value >= price, "Insufficient payment");
-
-    address seller = tokenOwnerOf(tokenId);
-    _transfer(address(this), msg.sender, tokenId, true, "");
-
-    if (msg.value > price) {
-        (bool refundSent,) = payable(msg.sender).call{value: msg.value - price}("");
-        require(refundSent, "Refund failed");
-    }
-
-    (bool sellerSent,) = payable(seller).call{value: price}("");
-    require(sellerSent, "Transfer to seller failed");
-
-    emit NFTPurchased(msg.sender, tokenId, price);
-}
 
     function listNFTForSale(bytes32 tokenId, uint256 price) external whenNotPaused nonReentrant {
         require(_exists(tokenId), "NFT does not exist");
@@ -163,7 +161,6 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
         require(_exists(tokenId), "NFT does not exist");
         require(_ownedNfts[address(this)].length > 0, "No NFTs listed");
         
-        // Fix: Rename isListed to nftIsListed to avoid shadowing the isListed function
         bool nftIsListed = false;
         for (uint256 i = 0; i < _ownedNfts[address(this)].length; i++) {
             if (_ownedNfts[address(this)][i] == tokenId) {
@@ -175,7 +172,6 @@ contract ArtGridStudio is LSP8IdentifiableDigitalAsset, OwnableCustom, Reentranc
         }
         require(nftIsListed, "NFT not listed");
 
-        // Fix: Replace tokenIdOperator with tokenOwnerOf and rename owner to nftOwner to avoid shadowing
         address nftOwner = tokenOwnerOf(tokenId);
         _transfer(address(this), nftOwner, tokenId, true, "");
         delete _nftPrices[tokenId];

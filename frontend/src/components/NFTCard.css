@@ -68,7 +68,7 @@
   transform: translateY(100%);
 }
 
-.nft-card.hovered {
+.nft-card:hover {
   box-shadow: 
     0 20px 40px rgba(0, 0, 0, 0.5),
     0 4px 12px rgba(0, 0, 0, 0.4),
@@ -827,26 +827,31 @@
 
 .comment-form {
   margin-bottom: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem; /* Space between textarea and buttons */
 }
 
 .comment-textarea {
   width: 100%;
-  min-height: 80px;
-  padding: 0.6rem;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.05);
+  min-height: 120px; /* Increased height for better usability */
+  padding: 1rem; /* Increased padding for better text layout */
+  border-radius: 12px; /* Rounded corners to match buttons */
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, rgba(124, 77, 255, 0.2), rgba(0, 184, 212, 0.2)); /* Gradient to match Submit button */
   resize: vertical;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.9rem; /* Slightly larger font for readability */
   color: var(--text);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .comment-textarea:focus {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.3);
+  box-shadow: 0 0 0 4px rgba(124, 77, 255, 0.3); /* Enhanced focus outline */
+  transform: translateY(-2px); /* Slight lift on focus */
 }
 
 .form-actions {
@@ -857,7 +862,7 @@
 .submit-button,
 .cancel-button {
   padding: 0.6rem 1rem;
-  border-radius: 5px;
+  border-radius: 12px; /* Match textarea radius */
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
@@ -1152,7 +1157,6 @@
     color: var(--text);
   }
 
-  elek
   .engagement-stats {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -1223,8 +1227,8 @@
 
   .comment-textarea,
   .stake-input {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: linear-gradient(135deg, rgba(124, 77, 255, 0.2), rgba(0, 184, 212, 0.2));
+    border: 1px solid rgba(255, 255, 255, 0.3);
   }
 
   .comment-item {
@@ -1306,7 +1310,7 @@
   }
 
   .comment-textarea {
-    min-height: 70px;
+    min-height: 100px; /* Adjusted for smaller screens */
   }
 
   .comments-list {
