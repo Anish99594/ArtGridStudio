@@ -376,8 +376,8 @@ function App() {
     }
   }, [nftQueryData, isError, error, currentTokenId]);
 
-  const workerUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:8787';
-  const proxyUrl = `${workerUrl}/proxy-image`;
+  const backendUrl = 'https://artgridstudio.onrender.com';
+  const proxyUrl = `${backendUrl}/proxy-image`;
 
   const fetchMetadata = async (tokenId, metadataCid, tierIndex, retries = 3) => {
     for (let attempt = 1; attempt <= retries; attempt++) {
@@ -400,7 +400,7 @@ function App() {
         }
 
         const jwt = await generateJwt();
-        const fetchUrl = `${workerUrl}/fetch-drive-metadata?url=${encodeURIComponent(url)}`;
+        const fetchUrl = `${backendUrl}/fetch-drive-metadata?url=${encodeURIComponent(url)}`;
         const startTime = Date.now();
         const response = await fetch(fetchUrl, {
           method: 'GET',

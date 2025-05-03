@@ -7,7 +7,7 @@ import './NFTCard.css';
 import { SignJWT } from 'jose';
 import artGridStudioABI from '../../abis/ArtGridStudio.json';
 
-const ARTGRIDSTUDIO_ADDRESS = '0x2a2f4030db2108Db832a25b22A24286673A2D265'; // Standardized address
+const ARTGRIDSTUDIO_ADDRESS = '0x2a2f4030db2108Db832a25b22A24286673A2D265';
 
 const NFTCard = React.memo(
   ({
@@ -39,8 +39,8 @@ const NFTCard = React.memo(
     const { address } = useAccount();
     const { writeContractAsync } = useWriteContract();
 
-    const workerUrl = import.meta.env.VITE_SERVER_URL || 'http://localhost:8787';
-    const proxyUrl = `${workerUrl}/proxy-image`;
+    const backendUrl = 'https://artgridstudio.onrender.com';
+    const proxyUrl = `${backendUrl}/proxy-image`;
 
     const { data: hasLiked } = useReadContract({
       address: ARTGRIDSTUDIO_ADDRESS,
@@ -331,7 +331,6 @@ const NFTCard = React.memo(
       }
 
       try {
-        // Check if contract is already an operator
         if (!isOperator) {
           toast.loading('Approving contract as operator...');
           const approved = await handleApproveOperator();
@@ -347,7 +346,7 @@ const NFTCard = React.memo(
           abi: artGridStudioABI,
           functionName: 'listNFTForSale',
           args: [tokenId, parseEther(price)],
-          gas: 300000, // Set a reasonable gas limit
+          gas: 300000,
         });
         toast.dismiss();
         toast.success('NFT listed for sale!');
@@ -368,7 +367,7 @@ const NFTCard = React.memo(
           abi: artGridStudioABI,
           functionName: 'cancelListing',
           args: [tokenId],
-          gas: 200000, // Set a reasonable gas limit
+          gas: 200000,
         });
         toast.dismiss();
         toast.success('Listing canceled!');
@@ -633,108 +632,98 @@ const NFTCard = React.memo(
                   disabled={loading || !isConnected}
                   className="cancel-listing-button"
                 >
-                  <span className="cancel-icon">✖️</span>
+                  <span className="cancel-icon">❌</span>
                   Cancel Listing
                 </button>
               </div>
             )}
-            {!isOwned && (
+            {!isOwned && isListed && (
               <div className="nft-buy-action">
                 <button
-                  onClick={onBuy}
-                  disabled={!price || loading || !isConnected}
+                  onClick={() => onBuy(tokenId)}
+                  disabled={loading || !isConnected}
                   className="buy-button"
-                  title={!isConnected ? 'Connect wallet to buy' : !price ? 'Price not available' : ''}
                 >
                   <span className="buy-icon">🛒</span>
-                  Buy Now
-                  <span className="buy-price">{price ? (Number(price) / 1e18).toFixed(2) : '0'} LYX</span>
+                  Buy for {formatEther(BigInt(price))} LYX
                 </button>
               </div>
             )}
-          </div>
-          {isCommentFormOpen && (
-            <div className="comment-section">
-              <div className="section-header">
-                <h4>Add Comment</h4>
-                <button className="close-button" onClick={() => setIsCommentFormOpen(false)}>✕</button>
-              </div>
+            {isCommentFormOpen && (
               <div className="comment-form">
                 <textarea
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  placeholder="Share your thoughts about this NFT..."
-                  required
-                  className="comment-textarea"
+                  placeholder="Add a comment..."
+                  className="comment-input"
+                  maxLength={280}
                 />
-                <div className="form-actions">
-                  <button onClick={handleComment} className="submit-button" disabled={loading || pendingAction === 'comment'}>
-                    <span className="submit-icon">📤</span>
-                    Submit
+                <div className="comment-actions">
+                  <button
+                    onClick={handleComment}
+                    disabled={loading || !comment.trim() || pendingAction === 'comment'}
+                    className="submit-comment-button"
+                  >
+                    Post
                   </button>
                   <button
-                    type="button"
-                    className="cancel-button"
                     onClick={() => setIsCommentFormOpen(false)}
-                    disabled={loading}
+                    className="cancel-comment-button"
                   >
                     Cancel
                   </button>
                 </div>
               </div>
-              {comments.length > 0 && (
-                <div className="comments-list">
-                  <h4>Latest Comments</h4>
-                  {comments.map((c, index) => (
-                    <div key={index} className="comment-item">
-                      <div className="comment-header">
-                        <div className="commenter-avatar">{c.commenter.slice(0, 2)}</div>
-                        <div className="commenter-info">
-                          <p className="commenter-address">{c.commenter.slice(0, 6)}...{c.commenter.slice(-4)}</p>
-                          <p className="comment-date">{new Date(c.timestamp * 1000).toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <p className="comment-text">{c.text}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-          {isStakeFormOpen && (
-            <div className="stake-section">
-              <div className="section-header">
-                <h4>Stake LYX</h4>
-                <button className="close-button" onClick={() => setIsStakeFormOpen(false)}>✕</button>
-              </div>
+            )}
+            {isStakeFormOpen && (
               <div className="stake-form">
                 <input
                   type="number"
                   value={stakeAmount}
                   onChange={(e) => setStakeAmount(Number(e.target.value))}
-                  placeholder="Enter LYX amount"
                   min="0.1"
                   step="0.1"
-                  required
                   className="stake-input"
+                  placeholder="Amount in LYX"
                 />
-                <div className="form-actions">
-                  <button onClick={handleStake} className="submit-button" disabled={loading || stakeAmount <= 0}>
-                    <span className="submit-icon">💎</span>
+                <div className="stake-actions">
+                  <button
+                    onClick={handleStake}
+                    disabled={loading || stakeAmount <= 0}
+                    className="submit-stake-button"
+                  >
                     Stake
                   </button>
                   <button
-                    type="button"
-                    className="cancel-button"
                     onClick={() => setIsStakeFormOpen(false)}
-                    disabled={loading}
+                    className="cancel-stake-button"
                   >
                     Cancel
                   </button>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+            {comments.length > 0 && (
+              <div className="comments-section">
+                <h4>Comments</h4>
+                <div className="comments-list">
+                  {comments.map((c, index) => (
+                    <div key={index} className="comment">
+                      <div className="comment-header">
+                        <span className="commenter">
+                          {c.commenter.slice(0, 6)}...{c.commenter.slice(-4)}
+                        </span>
+                        <span className="comment-timestamp">
+                          {new Date(Number(c.timestamp) * 1000).toLocaleString()}
+                        </span>
+                      </div>
+                      <p className="comment-text">{c.text}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
