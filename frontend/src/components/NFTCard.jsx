@@ -7,7 +7,7 @@ import './NFTCard.css';
 import { SignJWT } from 'jose';
 import artGridStudioABI from '../../abis/ArtGridStudio.json';
 
-const ARTGRIDSTUDIO_ADDRESS = '0x3101Ab5c760FD9BD5cE573Ed09902E39354aF492';
+const ARTGRIDSTUDIO_ADDRESS = '0x2a2f4030db2108Db832a25b22A24286673A2D265'; // Standardized address
 
 const NFTCard = React.memo(
   ({
@@ -33,6 +33,7 @@ const NFTCard = React.memo(
     const [isLoadingImage, setIsLoadingImage] = useState(true);
     const [imageError, setImageError] = useState(false);
     const [attemptCount, setAttemptCount] = useState(0);
+    const [pendingAction, setPendingAction] = useState(null);
     const isFetchingRef = useRef(false);
 
     const { address } = useAccount();
@@ -55,6 +56,14 @@ const NFTCard = React.memo(
       functionName: 'isListed',
       args: [tokenId],
       enabled: !!tokenId,
+    });
+
+    const { data: isOperator } = useReadContract({
+      address: ARTGRIDSTUDIO_ADDRESS,
+      abi: artGridStudioABI,
+      functionName: 'isOperatorFor',
+      args: [ARTGRIDSTUDIO_ADDRESS, tokenId],
+      enabled: !!tokenId && isOwned,
     });
 
     const generateJwt = useCallback(async () => {
@@ -233,19 +242,26 @@ const NFTCard = React.memo(
       };
     }, [metadata, tokenId, tierIndex, debouncedLoadImage, imageSrc, imageCache]);
 
+    const debouncedHandleLike = useCallback(
+      debounce(() => {
+        if (!isConnected) {
+          toast.error('Please connect your wallet to like');
+          return;
+        }
+        if (hasLiked) {
+          toast.error('You have already liked this NFT');
+          return;
+        }
+        if (onAddEngagement) {
+          setPendingAction('like');
+          onAddEngagement(tokenId, 1, '').finally(() => setPendingAction(null));
+        }
+      }, 500),
+      [isConnected, hasLiked, onAddEngagement, tokenId]
+    );
+
     const handleLike = () => {
-      if (!isConnected) {
-        toast.error('Please connect your wallet to like');
-        return;
-      }
-      if (hasLiked) {
-        toast.error('You have already liked this NFT');
-        return;
-      }
-      if (onAddEngagement) {
-        console.log('handleLike called for tokenId', tokenId, { likes: 1, comment: '' });
-        onAddEngagement(tokenId, 1, '');
-      }
+      debouncedHandleLike();
     };
 
     const handleCommentToggle = () => {
@@ -259,10 +275,12 @@ const NFTCard = React.memo(
     const handleComment = (e) => {
       e.preventDefault();
       if (onAddEngagement && comment.trim()) {
-        console.log('handleComment called for tokenId', tokenId, { likes: 0, comment });
-        onAddEngagement(tokenId, 0, comment);
-        setComment('');
-        setIsCommentFormOpen(false);
+        setPendingAction('comment');
+        onAddEngagement(tokenId, 0, comment).finally(() => {
+          setPendingAction(null);
+          setComment('');
+          setIsCommentFormOpen(false);
+        });
       }
     };
 
@@ -283,6 +301,24 @@ const NFTCard = React.memo(
       }
     };
 
+    const handleApproveOperator = async () => {
+      try {
+        console.log(`Approving operator for tokenId ${tokenId}`);
+        await writeContractAsync({
+          address: ARTGRIDSTUDIO_ADDRESS,
+          abi: artGridStudioABI,
+          functionName: 'authorizeOperator',
+          args: [ARTGRIDSTUDIO_ADDRESS, tokenId, '0x'],
+        });
+        toast.success('Operator approved successfully!');
+        return true;
+      } catch (error) {
+        console.error('Failed to approve operator:', error);
+        toast.error(`Failed to approve operator: ${error.message}`);
+        return false;
+      }
+    };
+
     const handleListForSale = async () => {
       if (!isConnected) {
         toast.error('Please connect your wallet to list');
@@ -293,30 +329,53 @@ const NFTCard = React.memo(
         toast.error('Invalid price');
         return;
       }
+
       try {
+        // Check if contract is already an operator
+        if (!isOperator) {
+          toast.loading('Approving contract as operator...');
+          const approved = await handleApproveOperator();
+          if (!approved) {
+            return;
+          }
+        }
+
+        console.log(`Listing NFT for sale: tokenId=${tokenId}, price=${price} LYX`);
+        toast.loading('Listing NFT for sale...');
         await writeContractAsync({
           address: ARTGRIDSTUDIO_ADDRESS,
           abi: artGridStudioABI,
           functionName: 'listNFTForSale',
           args: [tokenId, parseEther(price)],
+          gas: 300000, // Set a reasonable gas limit
         });
+        toast.dismiss();
         toast.success('NFT listed for sale!');
       } catch (error) {
-        toast.error('Failed to list NFT: ' + error.message);
+        toast.dismiss();
+        console.error('Failed to list NFT:', error);
+        const reason = error.reason || error.message || 'Unknown error';
+        toast.error(`Failed to list NFT: ${reason}`);
       }
     };
 
     const handleCancelListing = async () => {
       try {
+        console.log(`Canceling listing for tokenId ${tokenId}`);
+        toast.loading('Canceling listing...');
         await writeContractAsync({
           address: ARTGRIDSTUDIO_ADDRESS,
           abi: artGridStudioABI,
           functionName: 'cancelListing',
           args: [tokenId],
+          gas: 200000, // Set a reasonable gas limit
         });
+        toast.dismiss();
         toast.success('Listing canceled!');
       } catch (error) {
-        toast.error('Failed to cancel listing: ' + error.message);
+        toast.dismiss();
+        console.error('Failed to cancel listing:', error);
+        toast.error(`Failed to cancel listing: ${error.message}`);
       }
     };
 
@@ -348,8 +407,8 @@ const NFTCard = React.memo(
       return null;
     }
 
-    if (!nftData) {
-      console.log('No nftData for tokenId', tokenId, 'showing loading state');
+    if (!nftData || !nftData.tiers) {
+      console.log('No nftData or tiers for tokenId', tokenId, 'showing loading state');
       return (
         <div className="nft-card-wrapper">
           <div className="nft-card loading">
@@ -442,15 +501,26 @@ const NFTCard = React.memo(
               </div>
             )}
             <div className="engagement-stats">
-              {console.log('Rendering engagement stats for tokenId', tokenId, 'with nftData:', nftData)}
               <div className="stat">
                 <div className="stat-icon likes-icon">❤️</div>
-                <span className="stat-value">{nftData.totalLikes || 0}</span>
+                <span className="stat-value">
+                  {pendingAction === 'like' ? (
+                    <span className="pending">+1 (Pending)</span>
+                  ) : (
+                    nftData.totalLikes || 0
+                  )}
+                </span>
                 <span className="stat-label">Likes</span>
               </div>
               <div className="stat">
                 <div className="stat-icon comments-icon">💬</div>
-                <span className="stat-value">{nftData.totalComments || 0}</span>
+                <span className="stat-value">
+                  {pendingAction === 'comment' ? (
+                    <span className="pending">+1 (Pending)</span>
+                  ) : (
+                    nftData.totalComments || 0
+                  )}
+                </span>
                 <span className="stat-label">Comments</span>
               </div>
               <div className="stat">
@@ -519,7 +589,7 @@ const NFTCard = React.memo(
               <button
                 className={`action-button like ${hasLiked ? 'liked' : ''}`}
                 onClick={handleLike}
-                disabled={loading || hasLiked}
+                disabled={loading || hasLiked || pendingAction === 'like'}
                 title={hasLiked ? 'You have already liked this NFT' : !isConnected ? 'Connect wallet to like' : ''}
               >
                 <span className="action-icon">❤️</span>
@@ -528,7 +598,7 @@ const NFTCard = React.memo(
               <button
                 className={`action-button comment ${isCommentFormOpen ? 'active' : ''}`}
                 onClick={handleCommentToggle}
-                disabled={loading}
+                disabled={loading || pendingAction === 'comment'}
                 title={!isConnected ? 'Connect wallet to comment' : ''}
               >
                 <span className="action-icon">💬</span>
@@ -598,7 +668,7 @@ const NFTCard = React.memo(
                   className="comment-textarea"
                 />
                 <div className="form-actions">
-                  <button onClick={handleComment} className="submit-button" disabled={loading}>
+                  <button onClick={handleComment} className="submit-button" disabled={loading || pendingAction === 'comment'}>
                     <span className="submit-icon">📤</span>
                     Submit
                   </button>
@@ -632,75 +702,41 @@ const NFTCard = React.memo(
             </div>
           )}
           {isStakeFormOpen && (
-            <div className="stake-form">
+            <div className="stake-section">
               <div className="section-header">
                 <h4>Stake LYX</h4>
                 <button className="close-button" onClick={() => setIsStakeFormOpen(false)}>✕</button>
               </div>
-              <div className="stake-info">
-                <p>Staking LYX helps this NFT level up to the next tier!</p>
-              </div>
-              <div className="input-group">
-                <label htmlFor="stake-amount">Amount (LYX)</label>
-                <div className="input-with-buttons">
+              <div className="stake-form">
+                <input
+                  type="number"
+                  value={stakeAmount}
+                  onChange={(e) => setStakeAmount(Number(e.target.value))}
+                  placeholder="Enter LYX amount"
+                  min="0.1"
+                  step="0.1"
+                  required
+                  className="stake-input"
+                />
+                <div className="form-actions">
+                  <button onClick={handleStake} className="submit-button" disabled={loading || stakeAmount <= 0}>
+                    <span className="submit-icon">💎</span>
+                    Stake
+                  </button>
                   <button
-                    className="amount-button"
-                    onClick={() => setStakeAmount(Math.max(0.01, stakeAmount - 0.1))}
+                    type="button"
+                    className="cancel-button"
+                    onClick={() => setIsStakeFormOpen(false)}
+                    disabled={loading}
                   >
-                    -
-                  </button>
-                  <input
-                    id="stake-amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={stakeAmount}
-                    onChange={(e) => setStakeAmount(Number(e.target.value))}
-                    required
-                    className="stake-input"
-                  />
-                  <button className="amount-button" onClick={() => setStakeAmount(stakeAmount + 0.1)}>
-                    +
+                    Cancel
                   </button>
                 </div>
-                <div className="quick-amounts">
-                  <button onClick={() => setStakeAmount(0.1)}>0.1</button>
-                  <button onClick={() => setStakeAmount(0.5)}>0.5</button>
-                  <button onClick={() => setStakeAmount(1)}>1.0</button>
-                  <button onClick={() => setStakeAmount(5)}>5.0</button>
-                </div>
-              </div>
-              <div className="form-actions">
-                <button onClick={handleStake} className="submit-button stake-submit" disabled={loading}>
-                  <span className="stake-submit-icon">💎</span>
-                  Stake
-                </button>
-                <button
-                  type="button"
-                  className="cancel-button"
-                  onClick={() => setIsStakeFormOpen(false)}
-                  disabled={loading}
-                >
-                  Cancel
-                </button>
               </div>
             </div>
           )}
         </div>
       </div>
-    );
-  },
-  (prevProps, nextProps) => {
-    return (
-      prevProps.tokenId === nextProps.tokenId &&
-      prevProps.tierIndex === nextProps.tierIndex &&
-      prevProps.metadata === nextProps.metadata &&
-      prevProps.nftData === nextProps.nftData &&
-      prevProps.price === nextProps.price &&
-      prevProps.loading === nextProps.loading &&
-      prevProps.isConnected === nextProps.isConnected &&
-      prevProps.comments === nextProps.comments &&
-      prevProps.isOwned === nextProps.isOwned
     );
   }
 );
