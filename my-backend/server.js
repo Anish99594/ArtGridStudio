@@ -4,15 +4,34 @@ const { google } = require('googleapis');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { Readable } = require('stream');
-const fetch = require('node-fetch'); // Added for proxy endpoint
+const fetch = require('node-fetch');
 
 const app = express();
 
+// Configure allowed origins for CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'https://art-grid-studio-8uchgep4q-anish99594s-projects.vercel.app',
+  'http://localhost:5173', // For local development
+];
+
 app.use(cors({
-  origin: 'http://localhost:5173', // Adjust to your frontend URL if different
-  methods: ['GET', 'POST'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g., server-to-server) or from allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, origin || '*');
+    } else {
+      console.warn(`CORS rejected for origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: false,
 }));
+
+// Explicitly handle OPTIONS requests for all routes
+app.options('*', cors());
+
 app.use(express.json());
 
 // Load service account credentials
@@ -109,12 +128,14 @@ app.get('/fetch-drive-metadata', verifyJwt, async (req, res) => {
       return res.status(400).json({ error: 'Invalid or missing Google Drive URL' });
     }
 
+    console.log(`Fetching metadata from: ${url}`); // Debug: Log the URL
     const response = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {
+      console.error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
       return res.status(response.status).json({ error: `Failed to fetch metadata: ${response.statusText}` });
     }
 
@@ -153,12 +174,9 @@ app.get('/proxy-image', verifyJwt, async (req, res) => {
       return res.status(400).json({ error: `Invalid content type: ${contentType}` });
     }
 
-    // Set response headers
+    // Set response headers (rely on CORS middleware for Access-Control headers)
     res.set({
       'Content-Type': contentType,
-      'Access-Control-Allow-Origin': 'http://localhost:5173', // Match CORS origin
-      'Access-Control-Allow-Methods': 'GET',
-      'Access-Control-Allow-Headers': 'Authorization',
     });
 
     // Stream the image content
