@@ -4,13 +4,19 @@ const { google } = require('googleapis');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { Readable } = require('stream');
-const fetch = require('node-fetch');
+
+// Dynamically import node-fetch for ESM compatibility
+let fetch;
+(async () => {
+  fetch = (await import('node-fetch')).default;
+})();
 
 const app = express();
 
 // Configure allowed origins for CORS
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'https://art-grid-studio-8uchgep4q-anish99594s-projects.vercel.app',
+  'https://art-grid-studio.vercel.app',
   'http://localhost:5173',
 ];
 
@@ -141,6 +147,11 @@ app.get('/fetch-drive-metadata', verifyJwt, async (req, res) => {
     }
 
     console.log(`Fetching metadata from: ${url}`);
+    if (!fetch) {
+      console.error('Fetch function is not initialized');
+      return res.status(500).json({ error: 'Server configuration error', details: 'Fetch function is not initialized' });
+    }
+
     const response = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
@@ -168,6 +179,11 @@ app.get('/proxy-image', verifyJwt, async (req, res) => {
     }
 
     console.log(`Proxying image from: ${url}`);
+    if (!fetch) {
+      console.error('Fetch function is not initialized');
+      return res.status(500).json({ error: 'Server configuration error', details: 'Fetch function is not initialized' });
+    }
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
