@@ -7,6 +7,20 @@ import { SignJWT } from 'jose';
 import './CreateNFT.css';
 import artGridStudioABI from '../../abis/ArtGridStudio.json';
 
+// Helper function to safely encode a string to base64, handling Unicode characters
+const safeBtoa = (str) => {
+  try {
+    // Encode the string to escape Unicode characters, then convert to Latin1
+    const encoded = encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (match, p1) =>
+      String.fromCharCode(parseInt(p1, 16))
+    );
+    return btoa(encoded);
+  } catch (error) {
+    console.error('Base64 encoding error:', error);
+    throw new Error('Failed to encode data for upload');
+  }
+};
+
 const TierCard = ({ tier, index, handleTierChange, handleImageChange, previewUrls }) => {
   const tierColors = {
     0: {
@@ -312,7 +326,8 @@ const CreateNFT = ({ address, onSuccess }) => {
       let fileContent;
       let mimeType;
       if (isJson) {
-        fileContent = btoa(JSON.stringify(fileOrJson));
+        // Safely encode JSON string to base64, handling Unicode characters
+        fileContent = safeBtoa(JSON.stringify(fileOrJson));
         mimeType = 'application/json';
       } else {
         const arrayBuffer = await fileOrJson.arrayBuffer();
