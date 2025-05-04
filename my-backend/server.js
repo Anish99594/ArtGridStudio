@@ -4,15 +4,34 @@ const { google } = require('googleapis');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { Readable } = require('stream');
-const fetch = require('node-fetch'); // Added for proxy endpoint
+const fetch = require('node-fetch');
 
 const app = express();
 
+// Define allowed origins
+const allowedOrigins = [
+  'https://art-grid-studio.vercel.app',
+  'https://artgridstudio.onrender.com',
+  // Add other origins if needed, e.g., 'http://localhost:3000' for local development
+].filter(Boolean);
+
+// CORS configuration
 app.use(cors({
-  origin: 'https://artgridstudio.onrender.com', // Adjust to your frontend URL if different
-  methods: ['GET', 'POST'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g., server-to-server requests) or if origin is in allowedOrigins
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, origin || '*');
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// Ensure OPTIONS requests are handled for preflight
+app.options('*', cors());
+
 app.use(express.json());
 
 // Load service account credentials
@@ -30,15 +49,15 @@ const drive = google.drive({ version: 'v3', auth });
 // Middleware to verify JWT
 const verifyJwt = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  console.log('Received JWT:', token); // Debug: Log the token
-  console.log('SHARED_SECRET:', process.env.SHARED_SECRET); // Debug: Log the secret
+  console.log('Received JWT:', token);
+  console.log('SHARED_SECRET:', process.env.SHARED_SECRET);
   if (!token) return res.status(401).json({ error: 'No token provided' });
   try {
     const decoded = jwt.verify(token, process.env.SHARED_SECRET);
-    console.log('Decoded JWT:', decoded); // Debug: Log decoded payload
+    console.log('Decoded JWT:', decoded);
     next();
   } catch (error) {
-    console.error('JWT verification error:', error.message); // Debug: Log error
+    console.error('JWT verification error:', error.message);
     res.status(401).json({ error: 'Invalid token', details: error.message });
   }
 };
@@ -51,16 +70,13 @@ app.post('/upload-to-drive', verifyJwt, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Decode base64 file content
     const buffer = Buffer.from(fileContent, 'base64');
-    console.log(`Decoded file content for ${fileName}: Buffer of length ${buffer.length}`); // Debug: Log buffer info
+    console.log(`Decoded file content for ${fileName}: Buffer of length ${buffer.length}`);
 
-    // Create a readable stream from the buffer
     const stream = new Readable();
     stream.push(buffer);
-    stream.push(null); // Signal end of stream
+    stream.push(null);
 
-    // Upload file to Google Drive
     const fileMetadata = {
       name: fileName,
       parents: [process.env.GOOGLE_DRIVE_FOLDER_ID || 'root'],
@@ -76,9 +92,8 @@ app.post('/upload-to-drive', verifyJwt, async (req, res) => {
     });
 
     const fileId = response.data.id;
-    console.log(`Uploaded file ${fileName} with ID: ${fileId}`); // Debug: Log file ID
+    console.log(`Uploaded file ${fileName} with ID: ${fileId}`);
 
-    // Set file permissions to public ("Anyone with the link")
     await drive.permissions.create({
       fileId: fileId,
       requestBody: {
@@ -87,7 +102,6 @@ app.post('/upload-to-drive', verifyJwt, async (req, res) => {
       },
     });
 
-    // Get shareable link
     const linkResponse = await drive.files.get({
       fileId: fileId,
       fields: 'webContentLink, webViewLink',
@@ -134,7 +148,7 @@ app.get('/proxy-image', verifyJwt, async (req, res) => {
       return res.status(400).json({ error: 'Invalid or missing Google Drive image URL' });
     }
 
-    console.log(`Proxying image from: ${url}`); // Debug: Log the image URL
+    console.log(`Proxying image from: ${url}`);
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -156,12 +170,11 @@ app.get('/proxy-image', verifyJwt, async (req, res) => {
     // Set response headers
     res.set({
       'Content-Type': contentType,
-      'Access-Control-Allow-Origin': 'https://artgridstudio.onrender.com', // Match CORS origin
+      'Access-Control-Allow-Origin': req.headers.origin || 'https://art-grid-studio.vercel.app', // Dynamically set to request origin
       'Access-Control-Allow-Methods': 'GET',
       'Access-Control-Allow-Headers': 'Authorization',
     });
 
-    // Stream the image content
     response.body.pipe(res);
   } catch (error) {
     console.error('Error proxying image:', error);
