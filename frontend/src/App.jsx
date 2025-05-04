@@ -404,7 +404,7 @@ function App() {
         }
 
         const jwt = await generateJwt();
-        const fetchUrl = `${worker музика}/fetch-drive-metadata?url=${encodeURIComponent(url)}`;
+        const fetchUrl = `${workerUrl}/fetch-drive-metadata?url=${encodeURIComponent(url)}`;
         const startTime = Date.now();
         const response = await fetch(fetchUrl, {
           method: 'GET',
