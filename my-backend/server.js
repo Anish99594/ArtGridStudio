@@ -4,57 +4,15 @@ const { google } = require('googleapis');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { Readable } = require('stream');
-
-// Dynamically import node-fetch for ESM compatibility
-let fetch;
-(async () => {
-  fetch = (await import('node-fetch')).default;
-})();
+const fetch = require('node-fetch'); // Added for proxy endpoint
 
 const app = express();
 
-// Configure allowed origins for CORS
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'https://art-grid-studio-8uchgep4q-anish99594s-projects.vercel.app',
-  'https://art-grid-studio.vercel.app',
-  'http://localhost:5173',
-];
-
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, origin || '*');
-    } else {
-      console.warn(`CORS rejected for origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: ['GET', 'POST', 'OPTIONS'],
+  origin: 'https://artgridstudio.onrender.com', // Adjust to your frontend URL if different
+  methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: false,
 }));
-
-// Explicitly handle OPTIONS requests
-app.options('*', cors());
-
-// Log all registered routes for debugging
-app.use((req, res, next) => {
-  console.log(`Registering middleware for path: ${req.path}`);
-  next();
-});
-
-// Log routes after they are defined
-const logRoutes = () => {
-  console.log('Registered routes:');
-  app._router.stack.forEach((layer) => {
-    if (layer.route) {
-      console.log(`Route: ${layer.route.path} [${Object.keys(layer.route.methods).join(', ')}]`);
-    } else if (layer.name === 'router') {
-      console.log('Router middleware detected');
-    }
-  });
-};
-
 app.use(express.json());
 
 // Load service account credentials
@@ -72,15 +30,15 @@ const drive = google.drive({ version: 'v3', auth });
 // Middleware to verify JWT
 const verifyJwt = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  console.log('Received JWT:', token);
-  console.log('SHARED_SECRET:', process.env.SHARED_SECRET);
+  console.log('Received JWT:', token); // Debug: Log the token
+  console.log('SHARED_SECRET:', process.env.SHARED_SECRET); // Debug: Log the secret
   if (!token) return res.status(401).json({ error: 'No token provided' });
   try {
     const decoded = jwt.verify(token, process.env.SHARED_SECRET);
-    console.log('Decoded JWT:', decoded);
+    console.log('Decoded JWT:', decoded); // Debug: Log decoded payload
     next();
   } catch (error) {
-    console.error('JWT verification error:', error.message);
+    console.error('JWT verification error:', error.message); // Debug: Log error
     res.status(401).json({ error: 'Invalid token', details: error.message });
   }
 };
@@ -93,13 +51,16 @@ app.post('/upload-to-drive', verifyJwt, async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // Decode base64 file content
     const buffer = Buffer.from(fileContent, 'base64');
-    console.log(`Decoded file content for ${fileName}: Buffer of length ${buffer.length}`);
+    console.log(`Decoded file content for ${fileName}: Buffer of length ${buffer.length}`); // Debug: Log buffer info
 
+    // Create a readable stream from the buffer
     const stream = new Readable();
     stream.push(buffer);
-    stream.push(null);
+    stream.push(null); // Signal end of stream
 
+    // Upload file to Google Drive
     const fileMetadata = {
       name: fileName,
       parents: [process.env.GOOGLE_DRIVE_FOLDER_ID || 'root'],
@@ -115,8 +76,9 @@ app.post('/upload-to-drive', verifyJwt, async (req, res) => {
     });
 
     const fileId = response.data.id;
-    console.log(`Uploaded file ${fileName} with ID: ${fileId}`);
+    console.log(`Uploaded file ${fileName} with ID: ${fileId}`); // Debug: Log file ID
 
+    // Set file permissions to public ("Anyone with the link")
     await drive.permissions.create({
       fileId: fileId,
       requestBody: {
@@ -125,6 +87,7 @@ app.post('/upload-to-drive', verifyJwt, async (req, res) => {
       },
     });
 
+    // Get shareable link
     const linkResponse = await drive.files.get({
       fileId: fileId,
       fields: 'webContentLink, webViewLink',
@@ -146,19 +109,12 @@ app.get('/fetch-drive-metadata', verifyJwt, async (req, res) => {
       return res.status(400).json({ error: 'Invalid or missing Google Drive URL' });
     }
 
-    console.log(`Fetching metadata from: ${url}`);
-    if (!fetch) {
-      console.error('Fetch function is not initialized');
-      return res.status(500).json({ error: 'Server configuration error', details: 'Fetch function is not initialized' });
-    }
-
     const response = await fetch(url, {
       method: 'GET',
       headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {
-      console.error(`Failed to fetch metadata: ${response.status} ${response.statusText}`);
       return res.status(response.status).json({ error: `Failed to fetch metadata: ${response.statusText}` });
     }
 
@@ -178,12 +134,7 @@ app.get('/proxy-image', verifyJwt, async (req, res) => {
       return res.status(400).json({ error: 'Invalid or missing Google Drive image URL' });
     }
 
-    console.log(`Proxying image from: ${url}`);
-    if (!fetch) {
-      console.error('Fetch function is not initialized');
-      return res.status(500).json({ error: 'Server configuration error', details: 'Fetch function is not initialized' });
-    }
-
+    console.log(`Proxying image from: ${url}`); // Debug: Log the image URL
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -202,19 +153,21 @@ app.get('/proxy-image', verifyJwt, async (req, res) => {
       return res.status(400).json({ error: `Invalid content type: ${contentType}` });
     }
 
+    // Set response headers
     res.set({
       'Content-Type': contentType,
+      'Access-Control-Allow-Origin': 'https://artgridstudio.onrender.com', // Match CORS origin
+      'Access-Control-Allow-Methods': 'GET',
+      'Access-Control-Allow-Headers': 'Authorization',
     });
 
+    // Stream the image content
     response.body.pipe(res);
   } catch (error) {
     console.error('Error proxying image:', error);
     res.status(500).json({ error: 'Failed to proxy image', details: error.message });
   }
 });
-
-// Log routes after all are defined
-logRoutes();
 
 const PORT = process.env.PORT || 8787;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
