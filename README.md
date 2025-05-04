@@ -68,7 +68,7 @@ Cloudflare Workers Account: For proxying Google Drive content
 Installation
 
 Clone the Repository:
-git clone https://github.com/Anish99594/ArtGridStudio.git
+git clone https://github.com/your-username/artgrid-studio.git
 cd artgrid-studio
 
 
@@ -194,7 +194,7 @@ Multi-Chain Support: Extend to other EVM-compatible chains like Ethereum or Poly
 We welcome contributions to make ArtGrid Studio even better! Here’s how to get involved:
 
 Fork the Repository:
-git clone https://github.com/Anish99594/ArtGridStudio.git
+git clone https://github.com/your-username/artgrid-studio.git
 
 
 Create a Branch:
