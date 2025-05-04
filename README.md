@@ -1,4 +1,4 @@
-![ArtGrid Studio Dashboard](./ArtGridStudioFrontimage.png)
+![ArtGrid Studio Dashboard](frontend/public/ArtGridStudioFrontimage.png)
 
 # ArtGrid Studio 🎨
 
