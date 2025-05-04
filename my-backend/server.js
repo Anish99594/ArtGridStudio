@@ -4,7 +4,9 @@ const { google } = require('googleapis');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const { Readable } = require('stream');
-const fetch = require('node-fetch');
+
+// Dynamically import node-fetch to ensure compatibility with CommonJS
+const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const app = express();
 
