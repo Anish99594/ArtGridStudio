@@ -40,7 +40,7 @@ function App() {
   const marketplaceRef = useRef(null);
 
   const metadataCache = useMemo(() => new Map(), []);
-  const imageCache = useMemo(() => new Map(), []); // Stores { url, refCount }
+  const imageCache = useMemo(() => new Map(), []);
   const jwtCache = useMemo(() => ({ token: null, expires: 0 }), []);
 
   const generateJwt = async () => {
@@ -202,29 +202,33 @@ function App() {
             args: [tokenId],
           });
           const [currentTier, totalLikes, totalComments, totalStakedLyx, tiers, comments, price] = nftDataResult;
-          setNftData((prev) => ({
-            ...prev,
-            [tokenId]: {
-              currentTier: Number(currentTier || 0),
-              totalLikes: Number(totalLikes || 0),
-              totalComments: Number(totalComments || 0),
-              totalStakedLyx: totalStakedLyx ? Number(totalStakedLyx) : 0,
-              tiers: (tiers || []).map((tier, index) => ({
-                likesRequired: Number(tier.likesRequired || 0),
-                commentsRequired: Number(tier.commentsRequired || 0),
-                lyxStakeRequired: Number(tier.lyxStakeRequired || 0),
-                metadataCid: tier.metadataCid || '',
-                isUnlocked: tier.isUnlocked || false,
-                tierIndex: index,
-              })),
-              comments: (comments || []).map((c) => ({
-                commenter: c.commenter,
-                text: c.text,
-                timestamp: Number(c.timestamp),
-              })),
-              price: price ? Number(price) : 0,
-            },
-          }));
+          setNftData((prev) => {
+            const existingData = prev[tokenId] || {};
+            return {
+              ...prev,
+              [tokenId]: {
+                ...existingData,
+                currentTier: Number(currentTier || 0),
+                totalLikes: Number(totalLikes || 0),
+                totalComments: Number(totalComments || 0),
+                totalStakedLyx: totalStakedLyx ? Number(totalStakedLyx) : 0,
+                tiers: (tiers || []).map((tier, index) => ({
+                  likesRequired: Number(tier.likesRequired || 0),
+                  commentsRequired: Number(tier.commentsRequired || 0),
+                  lyxStakeRequired: Number(tier.lyxStakeRequired || 0),
+                  metadataCid: tier.metadataCid || '',
+                  isUnlocked: tier.isUnlocked || false,
+                  tierIndex: index,
+                })),
+                comments: (comments || []).map((c) => ({
+                  commenter: c.commenter,
+                  text: c.text,
+                  timestamp: Number(c.timestamp),
+                })),
+                price: price ? Number(price) : 0,
+              },
+            };
+          });
         } catch (error) {
           console.error(`Failed to fetch NFT data for tokenId ${tokenId}:`, error);
         }
@@ -400,7 +404,7 @@ function App() {
         }
 
         const jwt = await generateJwt();
-        const fetchUrl = `${workerUrl}/fetch-drive-metadata?url=${encodeURIComponent(url)}`;
+        const fetchUrl = `${worker музика}/fetch-drive-metadata?url=${encodeURIComponent(url)}`;
         const startTime = Date.now();
         const response = await fetch(fetchUrl, {
           method: 'GET',
@@ -727,6 +731,21 @@ function App() {
         },
       });
       console.log(`Adding engagement for tokenId ${tokenId}:`, { likes, comment });
+
+      // Optimistically update the like count
+      if (likes > 0) {
+        setNftData((prev) => {
+          const existingData = prev[tokenId] || {};
+          return {
+            ...prev,
+            [tokenId]: {
+              ...existingData,
+              totalLikes: (existingData.totalLikes || 0) + likes,
+            },
+          };
+        });
+      }
+
       const tx = await writeContractAsync({
         address: ARTGRIDSTUDIO_ADDRESS,
         abi: artGridStudioABI,
@@ -756,7 +775,45 @@ function App() {
             borderRadius: 'var(--border-radius-sm)',
           },
         });
-        setTokenIdQueue((prev) => [...new Set([...prev, tokenId])]);
+        // Fetch updated data to ensure consistency
+        try {
+          const nftDataResult = await publicClient.readContract({
+            address: ARTGRIDSTUDIO_ADDRESS,
+            abi: artGridStudioABI,
+            functionName: 'getNFTData',
+            args: [tokenId],
+          });
+          const [currentTier, totalLikes, totalComments, totalStakedLyx, tiers, comments, price] = nftDataResult;
+          setNftData((prev) => {
+            const existingData = prev[tokenId] || {};
+            return {
+              ...prev,
+              [tokenId]: {
+                ...existingData,
+                currentTier: Number(currentTier || 0),
+                totalLikes: Number(totalLikes || 0),
+                totalComments: Number(totalComments || 0),
+                totalStakedLyx: totalStakedLyx ? Number(totalStakedLyx) : 0,
+                tiers: (tiers || []).map((tier, index) => ({
+                  likesRequired: Number(tier.likesRequired || 0),
+                  commentsRequired: Number(tier.commentsRequired || 0),
+                  lyxStakeRequired: Number(tier.lyxStakeRequired || 0),
+                  metadataCid: tier.metadataCid || '',
+                  isUnlocked: tier.isUnlocked || false,
+                  tierIndex: index,
+                })),
+                comments: (comments || []).map((c) => ({
+                  commenter: c.commenter,
+                  text: c.text,
+                  timestamp: Number(c.timestamp),
+                })),
+                price: price ? Number(price) : 0,
+              },
+            };
+          });
+        } catch (error) {
+          console.error(`Failed to fetch updated NFT data for tokenId ${tokenId}:`, error);
+        }
       } else {
         throw new Error('Transaction failed');
       }
@@ -771,6 +828,19 @@ function App() {
           borderRadius: 'var(--border-radius-sm)',
         },
       });
+      // Revert optimistic update on failure
+      if (likes > 0) {
+        setNftData((prev) => {
+          const existingData = prev[tokenId] || {};
+          return {
+            ...prev,
+            [tokenId]: {
+              ...existingData,
+              totalLikes: (existingData.totalLikes || 0) - likes,
+            },
+          };
+        });
+      }
     } finally {
       setLoading(false);
     }
