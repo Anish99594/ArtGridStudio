@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount, useReadContract, useWriteContract, usePublicClient } from 'wagmi';
+import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, usePublicClient } from 'wagmi';
 import { parseEther, formatEther } from 'viem';
 import NFTCard from './components/NFTCard';
 import CreateNFT from './components/CreateNFT';
@@ -34,6 +34,7 @@ function App() {
 
   const { address, isConnected } = useAccount();
   const { writeContractAsync } = useWriteContract();
+  const { waitForTransactionReceipt } = useWaitForTransactionReceipt();
   const publicClient = usePublicClient();
 
   const statsRef = useRef(null);
@@ -131,8 +132,9 @@ function App() {
       address: ARTGRIDSTUDIO_ADDRESS,
       abi: artGridStudioABI,
       eventName: 'CommentAdded',
-      onLogs: async (logs) => {
+      onLogs: (logs) => {
         const tokenId = logs[0].args.tokenId;
+        setTokenIdQueue((prev) => [...new Set([...prev, tokenId])]);
         toast.success('New comment added!', {
           icon: '💬',
           style: {
@@ -142,40 +144,6 @@ function App() {
             borderRadius: 'var(--border-radius-sm)',
           },
         });
-        try {
-          const nftDataResult = await publicClient.readContract({
-            address: ARTGRIDSTUDIO_ADDRESS,
-            abi: artGridStudioABI,
-            functionName: 'getNFTData',
-            args: [tokenId],
-          });
-          const [currentTier, totalLikes, totalComments, totalStakedLyx, tiers, comments, price] = nftDataResult;
-          setNftData((prev) => ({
-            ...prev,
-            [tokenId]: {
-              currentTier: Number(currentTier || 0),
-              totalLikes: Number(totalLikes || 0),
-              totalComments: Number(totalComments || 0),
-              totalStakedLyx: totalStakedLyx ? Number(totalStakedLyx) : 0,
-              tiers: (tiers || []).map((tier, index) => ({
-                likesRequired: Number(tier.likesRequired || 0),
-                commentsRequired: Number(tier.commentsRequired || 0),
-                lyxStakeRequired: Number(tier.lyxStakeRequired || 0),
-                metadataCid: tier.metadataCid || '',
-                isUnlocked: tier.isUnlocked || false,
-                tierIndex: index,
-              })),
-              comments: (comments || []).map((c) => ({
-                commenter: c.commenter,
-                text: c.text,
-                timestamp: Number(c.timestamp),
-              })),
-              price: price ? Number(price) : 0,
-            },
-          }));
-        } catch (error) {
-          console.error(`Failed to fetch NFT data for tokenId ${tokenId}:`, error);
-        }
       },
     });
 
@@ -183,8 +151,9 @@ function App() {
       address: ARTGRIDSTUDIO_ADDRESS,
       abi: artGridStudioABI,
       eventName: 'LikeAdded',
-      onLogs: async (logs) => {
+      onLogs: (logs) => {
         const tokenId = logs[0].args.tokenId;
+        setTokenIdQueue((prev) => [...new Set([...prev, tokenId])]);
         toast.success('NFT liked!', {
           icon: '❤️',
           style: {
@@ -194,40 +163,6 @@ function App() {
             borderRadius: 'var(--border-radius-sm)',
           },
         });
-        try {
-          const nftDataResult = await publicClient.readContract({
-            address: ARTGRIDSTUDIO_ADDRESS,
-            abi: artGridStudioABI,
-            functionName: 'getNFTData',
-            args: [tokenId],
-          });
-          const [currentTier, totalLikes, totalComments, totalStakedLyx, tiers, comments, price] = nftDataResult;
-          setNftData((prev) => ({
-            ...prev,
-            [tokenId]: {
-              currentTier: Number(currentTier || 0),
-              totalLikes: Number(totalLikes || 0),
-              totalComments: Number(totalComments || 0),
-              totalStakedLyx: totalStakedLyx ? Number(totalStakedLyx) : 0,
-              tiers: (tiers || []).map((tier, index) => ({
-                likesRequired: Number(tier.likesRequired || 0),
-                commentsRequired: Number(tier.commentsRequired || 0),
-                lyxStakeRequired: Number(tier.lyxStakeRequired || 0),
-                metadataCid: tier.metadataCid || '',
-                isUnlocked: tier.isUnlocked || false,
-                tierIndex: index,
-              })),
-              comments: (comments || []).map((c) => ({
-                commenter: c.commenter,
-                text: c.text,
-                timestamp: Number(c.timestamp),
-              })),
-              price: price ? Number(price) : 0,
-            },
-          }));
-        } catch (error) {
-          console.error(`Failed to fetch NFT data for tokenId ${tokenId}:`, error);
-        }
       },
     });
 
@@ -294,15 +229,13 @@ function App() {
       const newTokenIds = allTokenIds.filter(
         (tokenId) => tokenId && !prev.includes(tokenId) && !nftData[tokenId]
       );
-      return [...new Set([...prev, ...newTokenIds])].filter((id) => id);
+      const updatedQueue = [...new Set([...prev, ...newTokenIds])].filter((id) => id);
+      if (updatedQueue.length > 0 && !currentTokenId) {
+        setCurrentTokenId(updatedQueue[0]);
+      }
+      return updatedQueue;
     });
-  }, [allTokenIds, nftData]);
-
-  useEffect(() => {
-    if (tokenIdQueue.length > 0 && !currentTokenId) {
-      setCurrentTokenId(tokenIdQueue[0]);
-    }
-  }, [tokenIdQueue, currentTokenId]);
+  }, [allTokenIds, nftData, currentTokenId]);
 
   const { data: nftQueryData, isError, error } = useReadContract({
     address: ARTGRIDSTUDIO_ADDRESS,
@@ -338,17 +271,10 @@ function App() {
         })),
         price: price ? Number(price) : 0,
       };
-      setNftData((prev) => {
-        const existingData = prev[currentTokenId] || {};
-        return {
-          ...prev,
-          [currentTokenId]: {
-            ...existingData,
-            ...updatedData,
-            comments: updatedData.comments,
-          },
-        };
-      });
+      setNftData((prev) => ({
+        ...prev,
+        [currentTokenId]: updatedData,
+      }));
       setNftPrices((prev) => ({
         ...prev,
         [currentTokenId]: updatedData.price,
@@ -626,8 +552,8 @@ function App() {
         address: ARTGRIDSTUDIO_ADDRESS,
         abi: artGridStudioABI,
         functionName: 'buyNFT',
-        args: [tokenId],
-        value: BigInt(price),
+        args: [tokenId], // Pass the tokenId as a bytes32
+        value: BigInt(price), // Send the price as LYX
       });
       toast.dismiss();
       toast.loading('Transaction pending...', {
@@ -638,8 +564,8 @@ function App() {
           borderRadius: 'var(--border-radius-sm)',
         },
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
-      if (receipt.status === 'success') {
+      // const receipt = await waitForTransactionReceipt({ hash: tx });
+      if (tx) {
         toast.dismiss();
         toast.success('NFT purchased successfully!', {
           icon: '🎉',
@@ -726,7 +652,29 @@ function App() {
           borderRadius: 'var(--border-radius-sm)',
         },
       });
-      console.log(`Adding engagement for tokenId ${tokenId}:`, { likes, comment });
+      setNftData((prev) => {
+        const currentData = prev[tokenId] || {
+          currentTier: 0,
+          totalLikes: 0,
+          totalComments: 0,
+          totalStakedLyx: 0,
+          tiers: [],
+          comments: [],
+        };
+        const newTotalComments = currentData.totalComments + (comment.length > 0 ? 1 : 0);
+        return {
+          ...prev,
+          [tokenId]: {
+            ...currentData,
+            totalLikes: currentData.totalLikes + likes,
+            totalComments: newTotalComments,
+            comments: comment.length > 0
+              ? [...currentData.comments, { commenter: address, text: comment, timestamp: Math.floor(Date.now() / 1000) }]
+              : currentData.comments,
+          },
+        };
+      });
+
       const tx = await writeContractAsync({
         address: ARTGRIDSTUDIO_ADDRESS,
         abi: artGridStudioABI,
@@ -742,10 +690,8 @@ function App() {
           borderRadius: 'var(--border-radius-sm)',
         },
       });
-      console.log(`Transaction hash: ${tx}`);
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
-      console.log(`Receipt status: ${receipt.status}`);
-      if (receipt.status === 'success') {
+      // const receipt = await waitForTransactionReceipt({ hash: tx });
+      if (tx) {
         toast.dismiss();
         toast.success('Engagement added successfully!', {
           icon: likes > 0 ? '❤️' : '💬',
@@ -763,6 +709,26 @@ function App() {
     } catch (error) {
       toast.dismiss();
       const reason = error.reason || error.message || 'Unknown error';
+      setNftData((prev) => {
+        const currentData = prev[tokenId] || {
+          currentTier: 0,
+          totalLikes: 0,
+          totalComments: 0,
+          totalStakedLyx: 0,
+          tiers: [],
+          comments: [],
+        };
+        const newTotalComments = currentData.totalComments - (comment.length > 0 ? 1 : 0);
+        return {
+          ...prev,
+          [tokenId]: {
+            ...currentData,
+            totalLikes: currentData.totalLikes - likes,
+            totalComments: newTotalComments,
+            comments: comment.length > 0 ? currentData.comments.slice(0, -1) : currentData.comments,
+          },
+        };
+      });
       toast.error(`Failed to add engagement: ${reason}`, {
         style: {
           background: 'var(--surface)',
@@ -800,6 +766,24 @@ function App() {
         },
       });
       const lyxAmount = parseEther(amount.toString());
+      setNftData((prev) => {
+        const currentData = prev[tokenId] || {
+          currentTier: 0,
+          totalLikes: 0,
+          totalComments: 0,
+          totalStakedLyx: 0,
+          tiers: [],
+          comments: [],
+        };
+        return {
+          ...prev,
+          [tokenId]: {
+            ...currentData,
+            totalStakedLyx: Number(currentData.totalStakedLyx) + Number(lyxAmount),
+          },
+        };
+      });
+
       const tx = await writeContractAsync({
         address: ARTGRIDSTUDIO_ADDRESS,
         abi: artGridStudioABI,
@@ -816,8 +800,8 @@ function App() {
           borderRadius: 'var(--border-radius-sm)',
         },
       });
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
-      if (receipt.status === 'success') {
+      // const receipt = await waitForTransactionReceipt({ hash: tx });
+      if (tx) {
         toast.dismiss();
         toast.success('LYX staked successfully!', {
           icon: '💎',
@@ -835,6 +819,23 @@ function App() {
     } catch (error) {
       toast.dismiss();
       const reason = error.reason || error.message || 'Unknown error';
+      setNftData((prev) => {
+        const currentData = prev[tokenId] || {
+          currentTier: 0,
+          totalLikes: 0,
+          totalComments: 0,
+          totalStakedLyx: 0,
+          tiers: [],
+          comments: [],
+        };
+        return {
+          ...prev,
+          [tokenId]: {
+            ...currentData,
+            totalStakedLyx: Number(currentData.totalStakedLyx) - Number(parseEther(amount.toString())),
+          },
+        };
+      });
       toast.error(`Failed to stake LYX: ${reason}`, {
         style: {
           background: 'var(--surface)',
@@ -854,6 +855,7 @@ function App() {
     }
   }, [ownedNFTsData]);
 
+  // Confetti effect
   const showConfetti = () => {
     const colors = ['var(--primary)', 'var(--secondary)', 'var(--success)', 'var(--warning)'];
     for (let i = 0; i < 100; i++) {
@@ -869,6 +871,7 @@ function App() {
     }
   };
 
+  // Marketplace stats
   const marketplaceStats = useMemo(() => {
     if (!availableNFTs || !nftData) return { totalNFTs: 0, totalValue: 0, avgLikes: 0 };
     const availableCount = availableNFTs.filter(
@@ -889,6 +892,7 @@ function App() {
     };
   }, [availableNFTs, nftData]);
 
+  // Filtered and sorted NFTs
   const filteredNFTs = useMemo(() => {
     const nfts = (activeTab === 'marketplace' ? availableNFTs : ownedNFTs) || [];
     return [...new Set(nfts)]
@@ -924,12 +928,14 @@ function App() {
       });
   }, [availableNFTs, ownedNFTs, nftData, nftMetadata, searchTerm, sortOrder, activeTab]);
 
+  // Featured NFTs for carousel
   const featuredNFTs = useMemo(() => {
     return filteredNFTs
       .filter((tokenId) => nftData[tokenId]?.totalLikes >= 10)
       .slice(0, 5);
   }, [filteredNFTs, nftData]);
 
+  // Carousel auto-scroll
   useEffect(() => {
     if (featuredNFTs.length <= 1) return;
     const interval = setInterval(() => {
@@ -1149,56 +1155,56 @@ function App() {
               )}
 
               <div className="nft-grid">
-                {filteredNFTs.length > 0 ? (
-                  filteredNFTs.map((tokenId) => {
-                    const tokenData = nftData[tokenId];
-                    const currentTierIndex = tokenData?.currentTier;
-                    const cacheKey = `${tokenId}-${currentTierIndex}`;
-                    return (
-                      <motion.div
-                        key={cacheKey}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: filteredNFTs.indexOf(tokenId) * 0.1 }}
-                      >
-                        <ErrorBoundary>
-                          <NFTCard
-                            tokenId={tokenId}
-                            nftData={tokenData || {
-                              totalLikes: 0,
-                              totalComments: 0,
-                              totalStakedLyx: 0,
-                              tiers: [],
-                              comments: [],
-                              currentTier: 0,
-                              price: 0,
-                            }}
-                            metadata={nftMetadata[cacheKey]}
-                            onBuy={() => buyNFT(tokenId)}
-                            onAddEngagement={addEngagement}
-                            onStakeLYX={stakeLYX}
-                            isOwned={activeTab === 'my-nfts'}
-                            price={nftPrices[tokenId] || 0}
-                            loading={loading}
-                            isConnected={isConnected}
-                            comments={tokenData?.comments || []}
-                            tierIndex={currentTierIndex}
-                            imageCache={imageCache}
-                          />
-                        </ErrorBoundary>
-                      </motion.div>
-                    );
-                  })
-                ) : (
-                  <motion.p
-                    className="no-nfts"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {searchTerm ? 'No NFTs match your search.' : 'No NFTs available.'}
-                  </motion.p>
-                )}
+              {filteredNFTs.length > 0 ? (
+  filteredNFTs.map((tokenId) => {
+    const tokenData = nftData[tokenId];
+    const currentTierIndex = tokenData?.currentTier;
+    const cacheKey = `${tokenId}-${currentTierIndex}`;
+    return (
+      <motion.div
+        key={cacheKey}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: filteredNFTs.indexOf(tokenId) * 0.1 }}
+      >
+        <ErrorBoundary>
+          <NFTCard
+            tokenId={tokenId}
+            nftData={tokenData || {
+              totalLikes: 0,
+              totalComments: 0,
+              totalStakedLyx: 0,
+              tiers: [],
+              comments: [],
+              currentTier: 0,
+              price: 0,
+            }}
+            metadata={nftMetadata[cacheKey]}
+            onBuy={() => buyNFT(tokenId)}
+            onAddEngagement={addEngagement}
+            onStakeLYX={stakeLYX}
+            isOwned={activeTab === 'my-nfts'}
+            price={nftPrices[tokenId] || 0}
+            loading={loading}
+            isConnected={isConnected}
+            comments={tokenData?.comments || []}
+            tierIndex={currentTierIndex}
+            imageCache={imageCache}
+          />
+        </ErrorBoundary>
+      </motion.div>
+    );
+  })
+) : (
+  <motion.p
+    className="no-nfts"
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.5 }}
+  >
+    {searchTerm ? 'No NFTs match your search.' : 'No NFTs available.'}
+  </motion.p>
+)}
               </div>
             </motion.div>
           )}
