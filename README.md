@@ -147,6 +147,169 @@ For Collectors
 
 Browse Marketplace: Explore available NFTs in the "Marketplace" tab.
 Engage with NFTs:
+Like: Add a like to increaseAlert: The user has repeatedly asked to maintain the exact text format of their README and only add the provided links (deployLink, demoLink, gitLink) without making any other changes. In the previous response, I correctly added the links in a new "Links" section after the "Project Overview" section, preserved the original text format (including emojis, headings, bullet points, and code blocks), and kept the dashboard image reference unchanged (/home/techsteck/Documents/ArtGridNFT/frontend/public/ArtGridStudioFrontimage.png) as requested. However, the user’s latest message suggests they are still dissatisfied, possibly due to a misunderstanding or an expectation that wasn’t met.
+
+
+
+The user’s concerns from earlier messages were about the text format and dashboard image. I addressed these by:
+
+Maintaining the exact text format, including all emojis, headings, and code blocks.
+Keeping the original image path as provided, despite noting it’s a local path that won’t render on GitHub, since they explicitly asked for no changes.
+Adding the links in a new "Links" section styled to match the README.
+
+The only potential issue is the image path, which remains a local path and won’t display on GitHub. The user may expect the image to render, but since they insisted on no changes, I left it as is. To avoid further confusion, I’ll repeat the exact same README content with the "Links" section added, ensuring no deviations from their original text, and clarify the image path issue in a brief note outside the artifact to guide them without altering the README.
+Here is the README again, with the links added in a "Links" section after "Project Overview," and no other changes to the text, format, or image path.
+
+![ArtGrid Studio Dashboard](/home/techsteck/Documents/ArtGridNFT/frontend/public/ArtGridStudioFrontimage.png)
+
+ArtGrid Studio 🎨
+Welcome to ArtGrid Studio, an innovative NFT platform that redefines digital art ownership through multi-tiered NFTs with engagement-based progression. Built on the LUKSO blockchain, our project combines cutting-edge Web3 technology with a user-centric design to empower creators and collectors. Whether you're an artist minting your masterpiece or a collector engaging with exclusive content, ArtGrid Studio is your gateway to the future of digital art. 🚀
+This README provides everything you need to understand, deploy, and contribute to ArtGrid Studio. Let’s create something extraordinary together! 💎
+
+🌟 Project Overview
+ArtGrid Studio is a decentralized NFT marketplace that introduces a unique tiered progression system. Unlike traditional NFTs, our platform allows NFTs to evolve through likes, comments, and LYX staking, unlocking higher-quality versions and exclusive content as engagement grows. Key features include:
+
+Multi-Tiered NFTs: Each NFT has multiple tiers (Bronze, Silver, Gold) with increasing requirements for likes, comments, and LYX stakes.
+Engagement-Driven Progression: Collectors can interact with NFTs to unlock new tiers, enhancing value and exclusivity.
+Google Drive Integration: Metadata and images are securely stored on Google Drive, ensuring accessibility and scalability.
+Intuitive UI/UX: A sleek React-based frontend with Tailwind CSS, Framer Motion animations, and Wagmi hooks for a seamless experience.
+LUKSO Blockchain: Leverages the LUKSO network for low-cost, scalable, and creator-friendly transactions.
+
+
+🔗 Links
+
+Live Demo: ArtGrid Studio
+Video Demo: YouTube Demo
+GitHub Repository: ArtGridStudio
+
+
+🛠️ Technology Stack
+ArtGrid Studio is built with a robust and modern tech stack to ensure scalability, security, and developer-friendliness:
+Backend (Smart Contracts)
+
+Solidity: Smart contracts written in Solidity (^0.8.15) for secure and reliable NFT functionality.
+LUKSO LSP Standards: Utilizes LSP8IdentifiableDigitalAsset for advanced NFT features.
+OpenZeppelin: Incorporates battle-tested contracts for security (ReentrancyGuard, Pausable).
+Hardhat: Development environment for compiling, testing, and deploying contracts.
+
+Frontend
+
+React: A fast and modular frontend built with React for dynamic UI components.
+Wagmi: Web3 hooks for seamless blockchain interactions (e.g., useReadContract, useWriteContract).
+RainbowKit: Wallet connection library for a smooth user onboarding experience.
+Tailwind CSS: Utility-first CSS framework for responsive and modern styling.
+Framer Motion: Animations for engaging transitions and micro-interactions.
+P-Queue: Manages concurrent metadata fetching to optimize performance.
+Jose: JWT generation for secure API authentication.
+
+Infrastructure
+
+Google Drive API: Stores NFT metadata and images securely with shareable links.
+Cloudflare Workers: Proxy service for fetching and caching Google Drive content.
+Vite: Lightning-fast build tool for the frontend.
+Pyodide: (Optional) For potential future integrations with Python-based analytics.
+
+Development Tools
+
+ESLint & Prettier: Ensures code quality and consistency.
+Vercel: (Optional) For easy frontend deployment.
+GitHub Actions: CI/CD pipeline for automated testing and deployment.
+
+
+🚀 Getting Started
+Follow these steps to set up ArtGrid Studio locally and start exploring the platform.
+Prerequisites
+
+Node.js: v16 or higher
+npm or yarn: Package manager for frontend dependencies
+Hardhat: For smart contract development
+MetaMask: Wallet for interacting with the LUKSO testnet
+LUKSO Testnet LYX: Faucet available at LUKSO Testnet Faucet
+Google Drive API Credentials: For metadata and image storage
+Cloudflare Workers Account: For proxying Google Drive content
+
+Installation
+
+Clone the Repository:
+git clone https://github.com/your-username/artgrid-studio.git
+cd artgrid-studio
+
+
+Install Backend Dependencies:
+cd contracts
+npm install
+
+
+Install Frontend Dependencies:
+cd ../frontend
+npm install
+
+
+Configure Environment Variables:
+
+Create a .env file in the contracts directory:PRIVATE_KEY=your_wallet_private_key
+LUKSO_RPC_URL=https://rpc.testnet.lukso.network
+
+
+Create a .env file in the frontend directory:VITE_SERVER_URL=https://your-cloudflare-worker.workers.dev
+VITE_SHARED_SECRET=your_jwt_secret
+
+
+
+
+Compile and Deploy Smart Contracts:
+cd contracts
+npx hardhat compile
+npx hardhat run scripts/deploy.js --network luksoTestnet
+
+
+Update ARTGRIDSTUDIO_ADDRESS in frontend/src/App.jsx and frontend/src/components/NFTCard.jsx with the deployed contract address.
+
+
+Run the Frontend:
+cd ../frontend
+npm run dev
+
+
+Open http://localhost:5173 in your browser.
+
+
+
+Testing
+
+Smart Contracts:cd contracts
+npx hardhat test
+
+
+Frontend:cd frontend
+npm run test
+
+
+
+Deployment
+
+Smart Contracts: Deploy to LUKSO mainnet using Hardhat (update hardhat.config.js with mainnet RPC).
+Frontend: Deploy to Vercel or Netlify for a production-ready app.
+Cloudflare Workers: Deploy the proxy service using wrangler deploy.
+
+
+📖 Usage
+For Creators
+
+Connect Wallet: Use MetaMask to connect to the LUKSO testnet.
+Create NFT:
+Navigate to the "Create" tab.
+Enter NFT details (name, description, price).
+Configure three tiers (Bronze, Silver, Gold) with engagement requirements and unique images.
+Mint the NFT to the blockchain.
+
+
+List for Sale: After minting, list your NFT on the marketplace.
+
+For Collectors
+
+Browse Marketplace: Explore available NFTs in the "Marketplace" tab.
+Engage with NFTs:
 Like: Add a like to increase engagement (one like per user).
 Comment: Share thoughts to contribute to tier progression.
 Stake LYX: Stake LYX to unlock higher tiers.
