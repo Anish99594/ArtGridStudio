@@ -28,6 +28,19 @@ ArtGrid Studio is a **decentralized NFT marketplace** that introduces a unique *
 
 ArtGrid Studio is built with a robust and modern tech stack to ensure scalability, security, and developer-friendliness:
 
+## 🧱 System Architecture
+
+Here's a high-level architecture diagram of **ArtGrid Studio** showing how different components interact across the system:
+
+![ArtGrid Studio Architecture](frontend/public/ArchitectureDiagrameArtGridStudio.png)
+
+### Components Overview:
+- **Frontend**: Built with React, Tailwind CSS, and Framer Motion. Connects to smart contracts and fetches metadata.
+- **Smart Contracts**: Deployed on the LUKSO testnet using Solidity and Hardhat, implementing LSP8 for tiered NFTs.
+- **Google Drive + Cloudflare Workers**: Off-chain storage for NFT metadata and media with fast, proxied access.
+- **Authentication**: JWT tokens ensure secure API requests from the frontend to backend services.
+- **LUKSO Blockchain**: Handles minting, engagement tracking, and staking with low-cost and scalable transactions.
+
 ### Backend (Smart Contracts)
 - **Solidity**: Smart contracts written in Solidity (^0.8.15) for secure and reliable NFT functionality.
 - **LUKSO LSP Standards**: Utilizes LSP8IdentifiableDigitalAsset for advanced NFT features.
