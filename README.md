@@ -151,7 +151,7 @@ Follow these steps to set up ArtGrid Studio locally and start exploring the plat
 ## 📖 Usage
 
 ### For Creators
-1. **Connect Wallet**: Use MetaMask to connect to the LUKSO testnet.
+1. **Connect Wallet**: Use universal Profile wallet to connect to the LUKSO testnet.
 2. **Create NFT**:
    - Navigate to the "Create" tab.
    - Enter NFT details (name, description, price).
